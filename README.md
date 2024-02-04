@@ -8,3 +8,8 @@ Welcome to the companion repository for the Medium Biosciences ML Hands-On Chall
 - `getting_started.ipynb` : Notebook for visualizing protein structures and classification
 - `pdb_share.zip` : Zip files containing protein 3D structures.  
     Note: this file was uploaded using github lfs, so you may need to install this to download and access it.
+
+
+## Setup
+
+- In my case, I had to install Git LFS with `brew install git-lfs`. Then, to get the input dataset I ran `git lfs fetch <FILENAME>`

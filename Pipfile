@@ -9,6 +9,8 @@ py3dmol = "*"
 pandas = "*"
 numpy = "*"
 jupyter = "*"
+torch = "*"
+torchvision = "*"
 
 [dev-packages]
 

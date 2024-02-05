@@ -11,6 +11,9 @@ numpy = "*"
 jupyter = "*"
 torch = "*"
 torchvision = "*"
+fair-esm = "*"
+matplotlib = "*"
+plotly = "*"
 
 [dev-packages]
 

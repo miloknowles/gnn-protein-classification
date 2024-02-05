@@ -152,10 +152,12 @@ class ProteinGraphDataset(data.Dataset):
     D_features = torch.cat([torch.cos(D), torch.sin(D)], 1)
     return D_features
   
-  
-  def _positional_embeddings(self, edge_index, 
-                 num_embeddings=None,
-                 period_range=[2, 1000]):
+  def _positional_embeddings(
+    self,
+    edge_index, 
+    num_embeddings=None,
+    period_range=[2, 1000]
+  ):
     # From https://github.com/jingraham/neurips19-graph-protein-design
     num_embeddings = num_embeddings or self.num_positional_embeddings
     d = edge_index[0] - edge_index[1]

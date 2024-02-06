@@ -9,3 +9,8 @@ def top_folder(rel='') -> str:
 def data_folder(rel='') -> str:
   """Returns a path relative to the `data` folder."""
   return os.path.join(top_folder('data'), rel)
+
+
+def models_folder(rel='') -> str:
+  """Returns a path relative to the `models` folder."""
+  return os.path.join(top_folder('models'), rel)

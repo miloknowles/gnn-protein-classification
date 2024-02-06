@@ -1,5 +1,3 @@
-# Source: https://github.com/drorlab/gvp-pytorch/blob/main/gvp/data.py
-
 import random
 import numpy as np
 import torch, math
@@ -39,7 +37,8 @@ class ProteinGraphDataset(data.Dataset):
   A map-syle `torch.utils.data.Dataset` which transforms JSON/dictionary-style
   protein structures into featurized protein graphs as described in the manuscript.
 
-  See instructions here: https://github.com/drorlab/gvp-pytorch/blob/main/README.md
+  * Source: https://github.com/drorlab/gvp-pytorch/blob/main/gvp/data.py
+  * README: https://github.com/drorlab/gvp-pytorch/blob/main/README.md
   
   Returned graphs are of type `torch_geometric.data.Data` with attributes:
   -x          alpha carbon coordinates, shape [n_nodes, 3]
@@ -114,6 +113,8 @@ class ProteinGraphDataset(data.Dataset):
       orientations = self._orientations(X_ca)
       sidechains = self._sidechains(coords)
       
+      # TODO(milo): Add the optional language model embeddings to node_s here.
+
       node_s = dihedrals
       node_v = torch.cat([orientations, sidechains.unsqueeze(-2)], dim=-2)
       edge_s = torch.cat([rbf, pos_embeddings], dim=-1)

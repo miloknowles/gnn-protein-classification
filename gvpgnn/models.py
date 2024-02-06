@@ -22,7 +22,7 @@ class ProteinStructureClassificationModel(nn.Module):
   In this specific problem formulation, the output labels are 10 different
   architecture level classifications of protein domains, based on CATH.
   
-  Should be used with `plm_ggnn.datasets.ProteinGraphDataset`, or with generators
+  Should be used with `gvpgnn.datasets.ProteinGraphDataset`, or with generators
   of `torch_geometric.data.Batch` objects with the same attributes.
 
   References

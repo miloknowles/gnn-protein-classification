@@ -92,7 +92,7 @@ class ProteinStructureClassificationModel(nn.Module):
     h_V: tuple[torch.Tensor, torch.Tensor],
     edge_index,
     h_E: tuple[torch.Tensor, torch.Tensor],
-    batch: Optional[torch.Tensor] = None
+    graph_indices: Optional[torch.Tensor] = None
   ):
     """
     Outputs the categorical distribution over labels.
@@ -108,12 +108,15 @@ class ProteinStructureClassificationModel(nn.Module):
       h_V = layer(h_V, edge_index, h_E)
 
     out = self.W_out(h_V)
-    
-    if batch is None:
+
+    # If we're NOT doing inference over batches, the 0th dimension is the node
+    # dimension. If the input data is batched, then the `graph_indices` input
+    # maps each node index to a graph in the batch. For example, if batch[i] = k,
+    # that means that node i belongs to graph k.
+    if graph_indices is None:
       out = out.mean(dim=0, keepdims=True)
     else:
-      out = scatter_mean(out, batch, dim=0)
+      out = scatter_mean(out, graph_indices, dim=0)
 
-    scores = self.dense(out).squeeze(-1)
-
-    return F.softmax(scores)
+    logits = self.dense(out).squeeze(-1)
+    return logits

@@ -32,7 +32,8 @@ def check_disjoint_dataset_splits():
 def preprocess(
   split_path: str,
   pdb_folder: str = paths.data_folder("pdb_share"),
-  limit: Optional[int] = None
+  limit: Optional[int] = None,
+  handle_bad_residue: str = "drop",
 ) -> tuple:
   """Preprocess the raw training data into a more useful format for the DataLoader.
   
@@ -43,10 +44,6 @@ def preprocess(
   We do the preprocessing ahead of time to reduce the complexity of the data
   loader code. Everything is put into a standardized JSON format before it gets
   to the data loader.
-
-  Currently, all of the JSON data is stored in a single file per split. If the
-  dataset was much larger, we'd probably want to output a single file per protein,
-  and have the dataloader load files from disk as needed (instead of up-front).
 
   The data model format is based on:
   https://github.com/drorlab/gvp-pytorch/blob/main/README.md
@@ -124,7 +121,6 @@ def preprocess(
           # There are probably more sophisticated ways of imputing the atom's position, but we can
           # at least get it close to the other atoms in this residue.
           coords.append(residue.center_of_mass())
-          coords.append([-1, -1, -1]) # TODO
 
       coords_each_residue.append(coords)
 
@@ -133,10 +129,13 @@ def preprocess(
       name=row.cath_id,
       seq="".join(seq),
       pdb_id=row.pdb_id,
+      cath_id=row.cath_id,
       class_=row["class"],
       architecture=row.architecture,
       topology=row.topology,
       superfamily=row.superfamily,
+      # This is the label that the model will learn to predict!
+      task_label=dm.architecture_labels[(row["class"], row["architecture"])],
       coords=coords_each_residue
     )
 
@@ -150,20 +149,28 @@ def preprocess(
 if __name__ == "__main__":
   check_disjoint_dataset_splits()
 
+  dataset_version = "cleaned_skip_missing"
+
   for split_name in ("train", "test", "val"):
     print(f"\n\n-------- {split_name} --------")
     split_path = paths.data_folder(f"{split_name}_cath_w_seqs_share.csv")
 
     # NOTE(milo): You can set a small `limit` here for debugging purposes.
-    data, warnings = preprocess(split_path, pdb_folder=paths.data_folder("pdb_share"), limit=None)
+    data, warnings = preprocess(
+      split_path,
+      pdb_folder=paths.data_folder("pdb_share"),
+      limit=None
+    )
+
     print("\nDONE!")
 
     print("\nWARNINGS:")
     print(warnings)
 
-    # https://github.com/pydantic/pydantic/discussions/4091
-    data_list = [item.dict() for item in data]
+    if not os.path.exists(paths.data_folder(f"{dataset_version}/{split_name}")):
+      os.makedirs(paths.data_folder(f"{dataset_version}/{split_name}"))
 
     # Write the JSON data to a file for each split:
-    with open(paths.data_folder(f"{split_name}_cleaned.json"), "w") as f:
-      json.dump(data_list, f, indent=2)
+    for item in data:
+      with open(paths.data_folder(f"{dataset_version}/{split_name}/{item.cath_id}.json"), "w") as f:
+        json.dump(item.dict(), f, indent=2)

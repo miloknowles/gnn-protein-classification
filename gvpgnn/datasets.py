@@ -1,10 +1,13 @@
 import random
+import glob
+import json
 import numpy as np
 import torch, math
 import torch.utils.data as data
 import torch.nn.functional as F
 import torch_geometric
 import torch_cluster
+from gvpgnn.datamodels import BackboneModel
 
 
 def _normalize(tensor, dim=-1):
@@ -55,14 +58,14 @@ class ProteinGraphDataset(data.Dataset):
 
   Parameters
   ----------
-  * `data_list`: JSON/dictionary-style protein dataset as described in README.md.
+  * `json_folder`: A folder with JSON-style representations of protein backbones.
   * `num_positional_embeddings`: number of positional embeddings
   * `top_k`: number of edges to draw per node (as destination node)
   * `device`: if `cuda`, will do preprocessing on the GPU
   """
   def __init__(
     self,
-    data_list: list[dict],
+    json_folder: str,
     num_positional_embeddings: int = 16,
     top_k: int = 30,
     num_rbf: int = 16,
@@ -70,26 +73,42 @@ class ProteinGraphDataset(data.Dataset):
   ):
     super(ProteinGraphDataset, self).__init__()
     
-    self.data_list = data_list
+    self.json_folder = json_folder
     self.top_k = top_k
     self.num_rbf = num_rbf
     self.num_positional_embeddings = num_positional_embeddings
     self.device = device
-    self.node_counts = [len(e['seq']) for e in data_list]
+
+    # This defines the ordering of examples in the dataset.
+    self.filenames = glob.glob(f"{self.json_folder}/*.json")
+
+    if len(self.filenames) == 0:
+      raise FileNotFoundError("Couldn't find any files in the dataset folder you passed. Does it exist and have JSON files in it?")
+
+    self.node_counts = [0 for _ in range(len(self.filenames))]
+
+    # Open up each file to see how many nodes it contains:
+    for i, filename in enumerate(self.filenames):
+      with open(filename, "r") as f:
+        m = BackboneModel.model_validate(json.load(f))
+        self.node_counts[i] = len(m.seq)
     
     self.letter_to_num = {
       'C': 4, 'D': 3, 'S': 15, 'Q': 5, 'K': 11, 'I': 9,
       'P': 14, 'T': 16, 'F': 13, 'A': 0, 'G': 7, 'H': 8,
       'E': 6, 'L': 10, 'R': 1, 'W': 17, 'V': 19, 
-      'N': 2, 'Y': 18, 'M': 12
+      'N': 2, 'Y': 18, 'M': 12, '_': -1, 
     }
-    self.num_to_letter = {v:k for k, v in self.letter_to_num.items()}
-    
+    self.num_to_letter = {v: k for k, v in self.letter_to_num.items()}
+
   def __len__(self):
-    return len(self.data_list)
+    return len(self.filenames)
   
   def __getitem__(self, i):
-    return self._featurize_as_graph(self.data_list[i])
+    """Load the filename with index `i` and featurize it."""
+    with open(self.filenames[i], "r") as f:
+      data = json.load(f)
+      return self._featurize_as_graph(data)
   
   def _featurize_as_graph(self, protein):
     name = protein['name']
@@ -98,7 +117,7 @@ class ProteinGraphDataset(data.Dataset):
                    device=self.device, dtype=torch.float32)   
       seq = torch.as_tensor([self.letter_to_num[a] for a in protein['seq']],
                   device=self.device, dtype=torch.long)
-      
+
       mask = torch.isfinite(coords.sum(dim=(1,2)))
       coords[~mask] = np.inf
       
@@ -123,10 +142,19 @@ class ProteinGraphDataset(data.Dataset):
       node_s, node_v, edge_s, edge_v = map(torch.nan_to_num,
           (node_s, node_v, edge_s, edge_v))
       
-    data = torch_geometric.data.Data(x=X_ca, seq=seq, name=name,
-                     node_s=node_s, node_v=node_v,
-                     edge_s=edge_s, edge_v=edge_v,
-                     edge_index=edge_index, mask=mask)
+    data = torch_geometric.data.Data(
+      x=X_ca,
+      seq=seq,
+      name=name,
+      task_label=protein['task_label'],
+      node_s=node_s,
+      node_v=node_v,
+      edge_s=edge_s,
+      edge_v=edge_v,
+      edge_index=edge_index,
+      mask=mask
+    )
+
     return data
                 
   def _dihedrals(self, X, eps=1e-7):

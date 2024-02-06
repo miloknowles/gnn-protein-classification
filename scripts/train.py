@@ -11,6 +11,7 @@ import gvpgnn.datasets as datasets
 import gvpgnn.models as models
 import gvpgnn.paths as paths
 import gvpgnn.datamodels as dm
+from gvpgnn.train_utils import print_confusion
 import numpy as np
 import torch_geometric
 from sklearn.metrics import confusion_matrix
@@ -167,27 +168,11 @@ def loop(model, dataloader, optimizer=None, n_categories: int = 10):
   )
 
 
-def print_confusion(mat, lookup, n_categories: int = 10):
-  """Prints out a confusion matrix during training."""
-  counts = mat.astype(np.int32)
-  mat = (counts.T / counts.sum(axis=-1, keepdims=True).T).T
-  mat = np.round(mat * 1000).astype(np.int32)
-  res = '\n'
-  for i in range(n_categories):
-    res += '\t{}'.format(lookup[i])
-  res += '\tCount\n'
-  for i in range(n_categories):
-    res += '{}\t'.format(lookup[i])
-    res += '\t'.join('{}'.format(n) for n in mat[i])
-    res += '\t{}\n'.format(sum(counts[i]))
-  print(res)
-
-
 def main():
   """Main command line interface for training."""
-  print(f"[INFO] Using device '{device}'")
-
-  print("\nARGUMENTS:")
+  print("\n[INFO]:")
+  print("device:", device)
+  print("model id:", model_id)
   for k, v in vars(args).items():
     print(f" {k} = {v}")
   print("\n")
@@ -203,8 +188,8 @@ def main():
     edge_in_dim=edge_in_dim,
     edge_h_dim=edge_h_dim,
     n_categories=10,
-    num_layers=3,
-    drop_rate=0.1    
+    num_layers=2,
+    drop_rate=0.1,
   )
 
   model = models.ProteinStructureClassificationModel(**params).to(device)

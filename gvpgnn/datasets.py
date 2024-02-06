@@ -211,7 +211,7 @@ class ProteinGraphDataset(data.Dataset):
     n, origin, c = X[:, 0], X[:, 1], X[:, 2]
     c, n = _normalize(c - origin), _normalize(n - origin)
     bisector = _normalize(c + n)
-    perp = _normalize(torch.cross(c, n))
+    perp = _normalize(torch.cross(c, n, dim=-1))
     vec = -bisector * math.sqrt(1 / 3) - perp * math.sqrt(2 / 3)
     return vec
   

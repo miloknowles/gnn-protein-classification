@@ -1,3 +1,4 @@
+from typing import Optional
 import random
 import glob
 import json
@@ -7,7 +8,8 @@ import torch.utils.data as data
 import torch.nn.functional as F
 import torch_geometric
 import torch_cluster
-from gvpgnn.datamodels import BackboneModel
+import gvpgnn.embeddings as embeddings
+from gvpgnn.data_models import BackboneModel
 
 
 def _normalize(tensor, dim=-1):
@@ -69,6 +71,7 @@ class ProteinGraphDataset(data.Dataset):
     num_positional_embeddings: int = 16,
     top_k: int = 30,
     num_rbf: int = 16,
+    plm: Optional[str] = "esm2_t6_8M_UR50D",
     device: str = "cpu"
   ):
     super(ProteinGraphDataset, self).__init__()
@@ -77,7 +80,14 @@ class ProteinGraphDataset(data.Dataset):
     self.top_k = top_k
     self.num_rbf = num_rbf
     self.num_positional_embeddings = num_positional_embeddings
+    self.plm = plm
     self.device = device
+
+    # If a protein language model is given, initialize it here.
+    if self.plm is not None:
+      self.plm_model, self.plm_alphabet = embeddings.esm2_model_dictionary[self.plm]()
+      self.plm_embedding_dim = embeddings.esm2_embedding_dims[self.plm]
+      self.plm_layer = embeddings.esm2_embedding_layer[self.plm]
 
     # This defines the ordering of examples in the dataset.
     self.filenames = glob.glob(f"{self.json_folder}/*.json")
@@ -101,16 +111,16 @@ class ProteinGraphDataset(data.Dataset):
     }
     self.num_to_letter = {v: k for k, v in self.letter_to_num.items()}
 
-  def __len__(self):
+  def __len__(self) -> int:
     return len(self.filenames)
   
-  def __getitem__(self, i):
+  def __getitem__(self, i) -> dict:
     """Load the filename with index `i` and featurize it."""
     with open(self.filenames[i], "r") as f:
       data = json.load(f)
       return self._featurize_as_graph(data)
   
-  def _featurize_as_graph(self, protein):
+  def _featurize_as_graph(self, protein) -> dict:
     name = protein['name']
     with torch.no_grad():
       coords = torch.as_tensor(protein['coords'], 
@@ -127,14 +137,24 @@ class ProteinGraphDataset(data.Dataset):
       pos_embeddings = self._positional_embeddings(edge_index)
       E_vectors = X_ca[edge_index[0]] - X_ca[edge_index[1]]
       rbf = _rbf(E_vectors.norm(dim=-1), D_count=self.num_rbf, device=self.device)
-      
+
       dihedrals = self._dihedrals(coords)                     
       orientations = self._orientations(X_ca)
       sidechains = self._sidechains(coords)
       
-      # TODO(milo): Add the optional language model embeddings to node_s here.
+      # The node scalar features can optionally include embeddings (by concatenating).
+      if self.plm is not None:
+        node_embedding = embeddings.extract_embedding_single(
+          self.plm_model,
+          self.plm_alphabet,
+          self.plm_layer,
+          # Can mask missing residues with the language model:
+          protein['seq'].replace('_', '<mask>')
+        )
+        node_s = torch.concat([dihedrals, node_embedding], dim=-1)
+      else:
+        node_s = dihedrals
 
-      node_s = dihedrals
       node_v = torch.cat([orientations, sidechains.unsqueeze(-2)], dim=-2)
       edge_s = torch.cat([rbf, pos_embeddings], dim=-1)
       edge_v = _normalize(E_vectors).unsqueeze(-2)
@@ -167,8 +187,8 @@ class ProteinGraphDataset(data.Dataset):
     u_0 = U[2:]
 
     # Backbone normals
-    n_2 = _normalize(torch.cross(u_2, u_1), dim=-1)
-    n_1 = _normalize(torch.cross(u_1, u_0), dim=-1)
+    n_2 = _normalize(torch.cross(u_2, u_1, dim=-1), dim=-1)
+    n_1 = _normalize(torch.cross(u_1, u_0, dim=-1), dim=-1)
 
     # Angle between normals
     cosD = torch.sum(n_2 * n_1, -1)
@@ -211,7 +231,7 @@ class ProteinGraphDataset(data.Dataset):
     n, origin, c = X[:, 0], X[:, 1], X[:, 2]
     c, n = _normalize(c - origin), _normalize(n - origin)
     bisector = _normalize(c + n)
-    perp = _normalize(torch.cross(c, n, dim=-1))
+    perp = _normalize(torch.cross(c, n, dim=-1), dim=-1)
     vec = -bisector * math.sqrt(1 / 3) - perp * math.sqrt(2 / 3)
     return vec
   

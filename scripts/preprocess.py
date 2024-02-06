@@ -9,7 +9,7 @@ import Bio.PDB.PDBParser
 from Bio.PDB.Polypeptide import protein_letters_3to1
 
 import gvpgnn.paths as paths
-import gvpgnn.datamodels as dm
+import gvpgnn.data_models as dm
 
 
 def check_disjoint_dataset_splits():

@@ -1,15 +1,25 @@
 from typing import Optional
 
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+
+from pydantic import BaseModel
 
 from .gvp_core import GVP, GVPConvLayer, LayerNorm
 from torch_scatter import scatter_mean
 
 
-class ProteinStructureClassificationModel(nn.Module):
+class ClassifierGNNParams(BaseModel):
+  node_in_dim: tuple[int, int]
+  node_h_dim: tuple[int, int]
+  edge_in_dim: tuple[int, int]
+  edge_h_dim: tuple[int, int]
+  n_categories: int = 10,
+  num_layers: int = 3,
+  drop_rate: float = 0.1
+
+
+class ClassifierGNN(nn.Module):
   """
   An adapted GVP-GNN for the protein structure classification task.
   
@@ -49,7 +59,7 @@ class ProteinStructureClassificationModel(nn.Module):
     num_layers: int = 3,
     drop_rate: float = 0.1
   ):
-    super(ProteinStructureClassificationModel, self).__init__()
+    super(ClassifierGNN, self).__init__()
 
     # Map the NODE embeddings to their hidden dimension.
     self.W_v = nn.Sequential(
@@ -86,6 +96,8 @@ class ProteinStructureClassificationModel(nn.Module):
       nn.Dropout(p=drop_rate),
       nn.Linear(2*node_scalar_dim, n_categories)
     )
+
+    self.n_categories = n_categories
 
   def forward(
     self,

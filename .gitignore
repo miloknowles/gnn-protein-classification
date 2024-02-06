@@ -1,6 +1,8 @@
 ml_challenge/
 .vscode/
+
 data/
+models/
 
 __pycache__
 *.pyc

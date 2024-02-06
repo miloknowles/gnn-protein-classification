@@ -18,6 +18,7 @@ tqdm = "*"
 torch-geometric = "*"
 torch-cluster = "*"
 torch-scatter = "*"
+pydantic = "*"
 
 [dev-packages]
 

@@ -1,3 +1,5 @@
+import sys; sys.path.append('..')
+
 import argparse
 from datetime import datetime
 from functools import partial
@@ -15,22 +17,23 @@ print = partial(print, flush=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--models-dir', metavar='PATH', default=paths.models_folder(),
-                    help='directory to save trained models')
+                    help='Directory to save trained models')
 parser.add_argument('--num-workers', metavar='N', type=int, default=4,
-                    help='number of threads for loading data')
+                    help='Number of threads for loading data')
 parser.add_argument('--max-nodes', metavar='N', type=int, default=3000,
-                    help='max number of nodes per batch')
+                    help='Max number of nodes per batch')
 parser.add_argument('--epochs', metavar='N', type=int, default=100,
-                    help='training epochs, default=100')
-# parser.add_argument('--cath-data', metavar='PATH', default='./data/chain_set.jsonl',
-#                     help='location of CATH dataset, default=./data/chain_set.jsonl')
-# parser.add_argument('--cath-splits', metavar='PATH', default='./data/chain_set_splits.json',
-#                     help='location of CATH split file, default=./data/chain_set_splits.json')
-# parser.add_argument('--ts50', metavar='PATH', default='./data/ts50.json',
-#                     help='location of TS50 dataset, default=./data/ts50.json')
-parser.add_argument('--train', action="store_true", help="train a model")
-parser.add_argument('--test', action="store_true", help="test a trained model")
+                    help='Training epochs')
+parser.add_argument('--train', action="store_true", help="Train a model from scratch or from a checkpoint.")
+parser.add_argument('--test', action="store_true", help="Test a trained model")
+parser.add_argument('--test-set-path', type=str, help="The path to a JSON file with test data")
+
 args = parser.parse_args()
+
+print("\nARGUMENTS:")
+for k, v in vars(args).items():
+  print(f"  {k} = {v}")
+print("\n")
 
 if not any([args.train, args.test]) or all([args.train and args.test]):
   raise ValueError("Must specify exactly one of --train or --test")

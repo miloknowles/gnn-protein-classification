@@ -109,8 +109,8 @@ class GVP(nn.Module):
     self,
     in_dims: tuple[int, int],
     out_dims: tuple[int, int],
-    h_dim: Optional[int],
-    activations: tuple[function, function] = (F.relu, torch.sigmoid),
+    h_dim: Optional[int] = None,
+    activations: tuple = (F.relu, torch.sigmoid),
     vector_gate: bool = False
   ):
     super(GVP, self).__init__()
@@ -266,7 +266,7 @@ class GVPConv(MessagePassing):
     n_layers: int = 3,
     module_list = None,
     aggr: str = "mean", 
-    activations: tuple[function, function] = (F.relu, torch.sigmoid),
+    activations: tuple = (F.relu, torch.sigmoid),
     vector_gate: bool = False
   ):
     super(GVPConv, self).__init__(aggr=aggr)
@@ -345,7 +345,7 @@ class GVPConvLayer(nn.Module):
     n_feedforward: int = 2,
     drop_rate: float = 0.1,
     autoregressive: bool = False, 
-    activations: tuple[function, function] = (F.relu, torch.sigmoid),
+    activations: tuple = (F.relu, torch.sigmoid),
     vector_gate: bool = False
   ):
     super(GVPConvLayer, self).__init__()

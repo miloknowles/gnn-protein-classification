@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from gvp_core import GVP, GVPConvLayer, LayerNorm
+from .gvp_core import GVP, GVPConvLayer, LayerNorm
 from torch_scatter import scatter_mean
 
 

@@ -95,14 +95,28 @@ class ProteinGraphDataset(data.Dataset):
     if len(self.filenames) == 0:
       raise FileNotFoundError("Couldn't find any files in the dataset folder you passed. Does it exist and have JSON files in it?")
 
+    # Count up the number of nodes in each graph (used by the sampler).
     self.node_counts = [0 for _ in range(len(self.filenames))]
+
+    # Determine the frequence of labels in the dataset (used by the sampler).
+    # TODO(milo): The number of labels should be a parameter.
+    n_classes = 10
+    self.label_counts = [0 for _ in range(n_classes)]
+    self.node_labels = [0 for _ in range(len(self.filenames))]
 
     # Open up each file to see how many nodes it contains:
     for i, filename in enumerate(self.filenames):
       with open(filename, "r") as f:
         m = BackboneModel.model_validate(json.load(f))
         self.node_counts[i] = len(m.seq)
-    
+        self.label_counts[m.task_label] += 1
+        self.node_labels[i] = m.task_label
+
+    # Calculate weightsx for each label.
+    self.class_weights = (1 / n_classes) * (len(self.filenames) / np.array(self.label_counts)) # (10)
+    # Calculate weights for each example in the dataset (does not need to sum to 1).
+    self.sampler_weights = [self.class_weights[self.node_labels[i]] for i in range(len(self.node_labels))]
+
     self.letter_to_num = {
       'C': 4, 'D': 3, 'S': 15, 'Q': 5, 'K': 11, 'I': 9,
       'P': 14, 'T': 16, 'F': 13, 'A': 0, 'G': 7, 'H': 8,
@@ -123,14 +137,17 @@ class ProteinGraphDataset(data.Dataset):
   def _featurize_as_graph(self, protein) -> dict:
     name = protein['name']
     with torch.no_grad():
-      coords = torch.as_tensor(protein['coords'], 
-                   device=self.device, dtype=torch.float32)   
-      seq = torch.as_tensor([self.letter_to_num[a] for a in protein['seq']],
-                  device=self.device, dtype=torch.long)
+      coords = torch.as_tensor(
+        protein['coords'], device=self.device, dtype=torch.float32
+      )
+      seq = torch.as_tensor(
+        [self.letter_to_num[a] for a in protein['seq']], device=self.device, dtype=torch.long
+      )
 
       mask = torch.isfinite(coords.sum(dim=(1,2)))
       coords[~mask] = np.inf
       
+      # NOTE(milo): Find the k-nearest neighbors based on the position of C-alpha.
       X_ca = coords[:, 1]
       edge_index = torch_cluster.knn_graph(X_ca, k=self.top_k)
       
@@ -148,8 +165,9 @@ class ProteinGraphDataset(data.Dataset):
           self.plm_model,
           self.plm_alphabet,
           self.plm_layer,
-          # Can mask missing residues with the language model:
-          protein['seq'].replace('_', '<mask>')
+          # Can pass unknown/missing residues to the language model:
+          # TODO(milo): What are the '.' '-' and '<mask>' tokens used for?
+          protein['seq'].replace('_', '<unk>')
         )
         node_s = torch.concat([dihedrals, node_embedding], dim=-1)
       else:
@@ -158,9 +176,8 @@ class ProteinGraphDataset(data.Dataset):
       node_v = torch.cat([orientations, sidechains.unsqueeze(-2)], dim=-2)
       edge_s = torch.cat([rbf, pos_embeddings], dim=-1)
       edge_v = _normalize(E_vectors).unsqueeze(-2)
-      
-      node_s, node_v, edge_s, edge_v = map(torch.nan_to_num,
-          (node_s, node_v, edge_s, edge_v))
+
+      node_s, node_v, edge_s, edge_v = map(torch.nan_to_num, (node_s, node_v, edge_s, edge_v))
       
     data = torch_geometric.data.Data(
       x=X_ca,
@@ -244,16 +261,20 @@ class BatchSampler(data.Sampler):
   maximum number of graph nodes.
   
   :param node_counts: array of node counts in the dataset to sample from
-  :param max_nodes: the maximum number of nodes in any batch,
-            including batches of a single element
+  :param max_nodes: the maximum number of nodes in any batch, including batches of a single element
   :param shuffle: if `True`, batches in shuffled order
   '''
-  def __init__(self, node_counts: list[int], max_nodes: int = 3000, shuffle: bool = True):
+  def __init__(
+    self,
+    node_counts: list[int],
+    max_nodes: int = 3000,
+    shuffle: bool = True,
+    sampler_weights: Optional[np.ndarray] = None
+  ):
     self.node_counts = node_counts
-    # Skip any graphs in the dataset that are larger than the maximum size.
-    self.idx = [i for i in range(len(node_counts)) if node_counts[i] <= max_nodes]
     self.shuffle = shuffle
     self.max_nodes = max_nodes
+    self.sampler_weights = sampler_weights
     self._form_batches()
   
   def _form_batches(self):
@@ -263,9 +284,20 @@ class BatchSampler(data.Sampler):
     until the maximum number of nodes have been met.
     """
     self.batches = []
+
+    # Optionally apply weighted sampling to deal with class imbalances.
+    if self.sampler_weights is not None:
+      assert(len(self.sampler_weights) == len(self.node_counts))
+      idx = list(data.WeightedRandomSampler(self.sampler_weights, len(self.node_counts), replacement=True))
+      # Skip any graphs in the dataset that are larger than the maximum size.
+      idx = [idx[j] for j in range(len(idx)) if (self.node_counts[idx[j]] <= self.max_nodes)]
+    else:
+      # Skip any graphs in the dataset that are larger than the maximum size.
+      idx = [i for i in range(len(self.node_counts)) if self.node_counts[i] <= self.max_nodes]
+      
     if self.shuffle:
-      random.shuffle(self.idx)
-    idx = self.idx
+      random.shuffle(idx)
+
     while idx:
       batch = []
       n_nodes = 0

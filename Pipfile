@@ -19,6 +19,7 @@ torch-geometric = "*"
 torch-cluster = "*"
 torch-scatter = "*"
 pydantic = "*"
+pytest = "*"
 
 [dev-packages]
 

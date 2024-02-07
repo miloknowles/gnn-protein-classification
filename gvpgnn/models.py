@@ -66,7 +66,7 @@ class ClassifierGNN(nn.Module):
     # Map the NODE embeddings to their hidden dimension.
     self.W_v = nn.Sequential(
       GVP(node_in_dim, node_h_dim, activations=(None, None)),
-      LayerNorm(node_in_dim),
+      LayerNorm(node_h_dim),
     )
 
     # Map the EDGE embeddings to their hidden dimension.

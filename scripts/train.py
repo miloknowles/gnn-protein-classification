@@ -207,6 +207,7 @@ def main():
     n_categories=10,
     num_layers=args.gnn_layers,
     drop_rate=0.1,
+    lr=args.lr,
     device=device,
     model_id=args.model_id,
   )

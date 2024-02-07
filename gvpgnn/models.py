@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from .gvp_core import GVP, GVPConvLayer, LayerNorm
 
-from torch_geometric.nn import TransformerConv, global_mean_pool as gap, global_max_pool as gmp
+from torch_geometric.nn import TransformerConv, global_mean_pool as gap, global_max_pool as gmp, TopKPooling
 
 
 class ClassifierGNNParams(BaseModel):
@@ -59,6 +59,7 @@ class ClassifierGNN(nn.Module):
     edge_h_dim: tuple[int, int],
     n_categories: int = 10,
     num_gvp_layers: int = 3,
+    num_pool_layers: int = 3,
     drop_rate: float = 0.1,
     n_conv_heads: int = 1,
   ):
@@ -111,10 +112,32 @@ class ClassifierGNN(nn.Module):
       heads=n_conv_heads,
     )
 
-    # Final dense block, which receives the average node embedding and outputs logits.
+    self.conv_layers = nn.ModuleList([])
+    self.pooling_layers = nn.ModuleList([])
+    self.bn_layers = nn.ModuleList([])
+    
+    for _ in range(num_pool_layers):
+      self.conv_layers.append(
+        TransformerConv(
+          node_h_dim[0],
+          node_h_dim[0],
+          concat=True,
+          beta=False,
+          dropout=drop_rate,
+          edge_dim=None,
+          heads=1,
+        )
+      )
+      self.bn_layers.append(
+        nn.BatchNorm1d(node_h_dim[0])
+      )
+      self.pooling_layers.append(
+        TopKPooling(node_h_dim[0], ratio=0.5) 
+      )
+
+    # Final dense block, which receives the pooled features as inputs, and outputs logits.
     self.dense = nn.Sequential(
-      # nn.Linear(n_conv_heads*2*ns, 2*ns),
-      nn.Linear(n_conv_heads*2*2*ns, 2*ns),
+      nn.Linear(n_conv_heads*ns*2, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
       nn.Linear(2*ns, ns),
@@ -143,21 +166,36 @@ class ClassifierGNN(nn.Module):
     h_V = self.W_v(h_V)
     h_E = self.W_e(h_E)
 
+    _edge_index = edge_index
+    _graph_indices = graph_indices
+
     for layer in self.gvp_conv_layers:
       h_V = layer(h_V, edge_index, h_E)
 
-    out = self.W_out(h_V)
-    conv1 = torch.relu(self.conv1(out, edge_index))
-    conv2 = torch.relu(self.conv2(conv1, edge_index))
+    x = self.W_out(h_V)
+
+    # global_features = []
+    for i in range(len(self.pooling_layers)):
+      x = self.conv_layers[i](x, _edge_index)
+      x = torch.relu(x)
+      x = self.bn_layers[i](x)
+      x, _edge_index, _, _graph_indices, _, _ = self.pooling_layers[i](x, _edge_index, None, _graph_indices)
+      # global_features.append(torch.cat([gmp(x, _graph_indices), gap(x, _graph_indices)], dim=-1))
+
+    # conv1 = torch.relu(self.conv1(out, edge_index))
+    # conv2 = torch.relu(self.conv2(conv1, edge_index))
 
     # Include max and mean global aggregations to let the network choose.
     # TODO(milo): Could also use a softmax with temperature here, letting the
     # network learn a global pooling operation.
+    # global_features = torch.concat([
+    #   gmp(conv2, graph_indices),
+    #   gap(conv2, graph_indices),
+    # ], dim=-1)
+      
     global_features = torch.concat([
-      gmp(conv1, graph_indices),
-      gap(conv1, graph_indices),
-      gmp(conv2, graph_indices),
-      gap(conv2, graph_indices),
+      gmp(x, _graph_indices),
+      gap(x, _graph_indices),
     ], dim=-1)
 
     return self.dense(global_features).squeeze(-1)

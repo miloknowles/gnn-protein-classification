@@ -65,11 +65,22 @@ class ClassifierGNN(nn.Module):
   ):
     super(ClassifierGNN, self).__init__()
     self.n_categories = n_categories
+    ns, nv = node_h_dim
+
+    # First, embed the (potential high-dimensional) scalar features for each node
+    # to a lower dimension. Since the features come from a static, pre-trained network,
+    # we can learn some modifications to them here.
+    self.W_features = nn.Sequential(
+      nn.Linear(node_in_dim[0], ns*2),
+      nn.ReLU(inplace=True),
+      nn.Linear(ns*2, ns),
+      nn.ReLU(inplace=True),
+    )
 
     # Map the NODE embeddings to their hidden dimension.
     self.W_v = nn.Sequential(
-      LayerNorm(node_in_dim),
-      GVP(node_in_dim, node_h_dim, activations=(None, None)),
+      LayerNorm((ns, node_in_dim[1])),
+      GVP((ns, node_in_dim[1]), node_h_dim, activations=(None, None)),
     )
 
     # Map the EDGE embeddings to their hidden dimension.
@@ -85,55 +96,54 @@ class ClassifierGNN(nn.Module):
 
     # Apply one last GVP, and get rid of the vector (R^3) features in the process.
     # This leaves only scalar features for the final blocks leading to classification.
-    ns, _ = node_h_dim
     self.W_out = nn.Sequential(
       LayerNorm(node_h_dim),
       GVP(node_h_dim, (ns, 0)),
     )
 
     # Apply a convolution with attention to help propagate more information around the graph.
-    # self.conv1 = TransformerConv(
-    #   node_h_dim[0],
-    #   node_h_dim[0],
-    #   concat=True,
-    #   beta=False,
-    #   dropout=drop_rate,
-    #   edge_dim=None,
-    #   heads=n_conv_heads,
-    # )
+    self.conv1 = TransformerConv(
+      node_h_dim[0],
+      node_h_dim[0],
+      concat=True,
+      beta=False,
+      dropout=drop_rate,
+      edge_dim=None,
+      heads=n_conv_heads,
+    )
 
-    # self.conv2 = TransformerConv(
-    #   node_h_dim[0],
-    #   node_h_dim[0],
-    #   concat=True,
-    #   beta=False,
-    #   dropout=drop_rate,
-    #   edge_dim=None,
-    #   heads=n_conv_heads,
-    # )
+    self.conv2 = TransformerConv(
+      node_h_dim[0],
+      node_h_dim[0],
+      concat=True,
+      beta=False,
+      dropout=drop_rate,
+      edge_dim=None,
+      heads=n_conv_heads,
+    )
 
-    self.conv_layers = nn.ModuleList([])
-    self.pooling_layers = nn.ModuleList([])
-    self.bn_layers = nn.ModuleList([])
+    # self.conv_layers = nn.ModuleList([])
+    # self.pooling_layers = nn.ModuleList([])
+    # self.bn_layers = nn.ModuleList([])
     
-    for _ in range(num_pool_layers):
-      self.conv_layers.append(
-        TransformerConv(
-          node_h_dim[0],
-          node_h_dim[0],
-          concat=True,
-          beta=False,
-          dropout=drop_rate,
-          edge_dim=None,
-          heads=1,
-        )
-      )
-      self.bn_layers.append(
-        nn.BatchNorm1d(node_h_dim[0])
-      )
-      self.pooling_layers.append(
-        TopKPooling(node_h_dim[0], ratio=0.5) 
-      )
+    # for _ in range(num_pool_layers):
+    #   self.conv_layers.append(
+    #     TransformerConv(
+    #       node_h_dim[0],
+    #       node_h_dim[0],
+    #       concat=True,
+    #       beta=False,
+    #       dropout=drop_rate,
+    #       edge_dim=None,
+    #       heads=1,
+    #     )
+    #   )
+    #   self.bn_layers.append(
+    #     nn.BatchNorm1d(node_h_dim[0])
+    #   )
+    #   self.pooling_layers.append(
+    #     TopKPooling(node_h_dim[0], ratio=0.5) 
+    #   )
 
     # Final dense block, which receives the pooled features as inputs, and outputs logits.
     self.dense = nn.Sequential(
@@ -163,7 +173,7 @@ class ClassifierGNN(nn.Module):
     * `h_E`: tuple (s, V) of edge embeddings
     * `graph_indices`: the graph index that each node belongs to
     """
-    h_V = self.W_v(h_V)
+    h_V = self.W_v((self.W_features(h_V[0]), h_V[1]))
     h_E = self.W_e(h_E)
 
     _edge_index = edge_index
@@ -175,15 +185,15 @@ class ClassifierGNN(nn.Module):
     x = self.W_out(h_V)
 
     # global_features = []
-    for i in range(len(self.pooling_layers)):
-      x = self.conv_layers[i](x, _edge_index)
-      x = torch.relu(x)
-      x = self.bn_layers[i](x)
-      x, _edge_index, _, _graph_indices, _, _ = self.pooling_layers[i](x, _edge_index, None, _graph_indices)
+    # for i in range(len(self.pooling_layers)):
+    #   x = self.conv_layers[i](x, _edge_index)
+    #   x = torch.relu(x)
+    #   x = self.bn_layers[i](x)
+    #   x, _edge_index, _, _graph_indices, _, _ = self.pooling_layers[i](x, _edge_index, None, _graph_indices)
       # global_features.append(torch.cat([gmp(x, _graph_indices), gap(x, _graph_indices)], dim=-1))
 
-    # conv1 = torch.relu(self.conv1(out, edge_index))
-    # conv2 = torch.relu(self.conv2(conv1, edge_index))
+    x = torch.relu(self.conv1(x, edge_index))
+    x = torch.relu(self.conv2(x, edge_index))
 
     # Include max and mean global aggregations to let the network choose.
     # TODO(milo): Could also use a softmax with temperature here, letting the

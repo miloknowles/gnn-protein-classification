@@ -71,6 +71,8 @@ class ProteinGraphDataset(data.Dataset):
     num_positional_embeddings: int = 16,
     top_k: int = 30,
     num_rbf: int = 16,
+    edge_algorithm: str = "knn_graph", # or radius_graph
+    r_ball_radius: float = 8, # angstroms
     plm: Optional[str] = "esm2_t6_8M_UR50D",
     device: str = "cpu"
   ):
@@ -79,6 +81,8 @@ class ProteinGraphDataset(data.Dataset):
     self.json_folder = json_folder
     self.top_k = top_k
     self.num_rbf = num_rbf
+    self.edge_algorithm = edge_algorithm
+    self.r_ball_radius = r_ball_radius
     self.num_positional_embeddings = num_positional_embeddings
     self.plm = plm
     self.device = device
@@ -149,7 +153,11 @@ class ProteinGraphDataset(data.Dataset):
       
       # NOTE(milo): Find the k-nearest neighbors based on the position of C-alpha.
       X_ca = coords[:, 1]
-      edge_index = torch_cluster.knn_graph(X_ca, k=self.top_k)
+
+      if self.edge_algorithm == "knn_graph":
+        edge_index = torch_cluster.knn_graph(X_ca, k=self.top_k)
+      elif self.edge_algorithm == "radius_graph":
+        edge_index = torch_cluster.radius_graph(X_ca, r=self.r_ball_radius)
       
       pos_embeddings = self._positional_embeddings(edge_index)
       E_vectors = X_ca[edge_index[0]] - X_ca[edge_index[1]]

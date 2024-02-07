@@ -203,7 +203,9 @@ def main():
     node_h_dim=node_h_dim,
     edge_in_dim=edge_in_dim,
     edge_h_dim=edge_h_dim,
+    edge_algorithm=args.edge_algorithm,
     top_k=args.top_k,
+    r_ball_radius=args.r_ball_radius,
     n_categories=10,
     num_layers=args.gnn_layers,
     drop_rate=0.1,
@@ -222,9 +224,12 @@ def main():
   model = models.ClassifierGNN(**model_params).to(device)
 
   if args.train:
-    trainset = datasets.ProteinGraphDataset(args.train_path, top_k=args.top_k, plm=args.plm)
-    valset = datasets.ProteinGraphDataset(args.val_path, top_k=args.top_k, plm=args.plm)
-    testset = datasets.ProteinGraphDataset(args.test_path, top_k=args.top_k, plm=args.plm)
+    trainset = datasets.ProteinGraphDataset(
+      args.train_path, edge_algorithm=args.edge_algorithm, top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm)
+    valset = datasets.ProteinGraphDataset(
+      args.val_path, edge_algorithm=args.edge_algorithm, top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm)
+    testset = datasets.ProteinGraphDataset(
+      args.test_path, edge_algorithm=args.edge_algorithm, top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm)
     train(model, train_params, trainset, valset, testset)
 
   else:

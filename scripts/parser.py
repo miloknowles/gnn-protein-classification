@@ -26,7 +26,9 @@ parser.add_argument('--lr', type=float, default=1e-3, help="The learning rate fo
 
 parser.add_argument('--plm', choices=[*embeddings.esm2_model_dictionary.keys(), None], 
                     default=None, help="Which pretrained protein language model to use (default None)")
+parser.add_argument('--edge-algorithm', choices=["knn_graph", "radius_graph"], default="knn_graph", help="How to determine graph connectivity")
 parser.add_argument('--top-k', type=int, default=30, help="How many k-nearest neighbors to connect in the GNN")
+parser.add_argument('--r-ball-radius', type=float, default=8, help="Radius for r-ball graph algorithm (in angstroms)")
 parser.add_argument('--gnn-layers', type=int, default=4, help="Number of GVP layers in the GNN")
 parser.add_argument('--node-h-scalar-dim', type=int, default=100, help="The dimensionality for node scalar embeddings in the GNN")
 

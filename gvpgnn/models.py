@@ -60,7 +60,7 @@ class ClassifierGNN(nn.Module):
     n_categories: int = 10,
     num_gvp_layers: int = 3,
     drop_rate: float = 0.1,
-    n_heads: int = 4,
+    n_conv_heads: int = 1,
   ):
     super(ClassifierGNN, self).__init__()
     self.n_categories = n_categories
@@ -78,11 +78,12 @@ class ClassifierGNN(nn.Module):
     )
 
     # Apply a variable number of messaging passing updates (with GVPs used internally).
-    self.layers = nn.ModuleList(
+    self.gvp_conv_layers = nn.ModuleList(
       GVPConvLayer(node_h_dim, edge_h_dim, drop_rate=drop_rate) for _ in range(num_gvp_layers)
     )
 
-    # Apply one last GVP, and get rid of the vector (R^3) features.
+    # Apply one last GVP, and get rid of the vector (R^3) features in the process.
+    # This leaves only scalar features for the final blocks leading to classification.
     ns, _ = node_h_dim
     self.W_out = nn.Sequential(
       LayerNorm(node_h_dim),
@@ -97,18 +98,29 @@ class ClassifierGNN(nn.Module):
       beta=False,
       dropout=drop_rate,
       edge_dim=None,
-      heads=n_heads,
+      heads=n_conv_heads,
+    )
+
+    self.conv2 = TransformerConv(
+      node_h_dim[0],
+      node_h_dim[0],
+      concat=True,
+      beta=False,
+      dropout=drop_rate,
+      edge_dim=None,
+      heads=n_conv_heads,
     )
 
     # Final dense block, which receives the average node embedding and outputs logits.
     self.dense = nn.Sequential(
-      nn.Linear(n_heads*2*ns, 2*ns),
+      # nn.Linear(n_conv_heads*2*ns, 2*ns),
+      nn.Linear(n_conv_heads*2*2*ns, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(2*ns, 2*ns),
+      nn.Linear(2*ns, ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(2*ns, n_categories)
+      nn.Linear(ns, n_categories)
     )
 
   def forward(
@@ -131,15 +143,21 @@ class ClassifierGNN(nn.Module):
     h_V = self.W_v(h_V)
     h_E = self.W_e(h_E)
 
-    for layer in self.layers:
+    for layer in self.gvp_conv_layers:
       h_V = layer(h_V, edge_index, h_E)
 
     out = self.W_out(h_V)
-    out = torch.relu(self.conv1(out, edge_index))
+    conv1 = torch.relu(self.conv1(out, edge_index))
+    conv2 = torch.relu(self.conv2(conv1, edge_index))
 
+    # Include max and mean global aggregations to let the network choose.
+    # TODO(milo): Could also use a softmax with temperature here, letting the
+    # network learn a global pooling operation.
     global_features = torch.concat([
-      gmp(out, graph_indices),
-      gap(out, graph_indices)
+      gmp(conv1, graph_indices),
+      gap(conv1, graph_indices),
+      gmp(conv2, graph_indices),
+      gap(conv2, graph_indices),
     ], dim=-1)
 
     return self.dense(global_features).squeeze(-1)

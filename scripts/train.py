@@ -211,7 +211,7 @@ def main():
     top_k=args.top_k,
     r_ball_radius=args.r_ball_radius,
     n_categories=10,
-    num_layers=args.gnn_layers,
+    num_gvp_layers=args.gnn_layers,
     drop_rate=0.1,
     max_nodes=args.max_nodes,
     lr=args.lr,

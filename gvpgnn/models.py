@@ -6,7 +6,6 @@ import torch.nn as nn
 from pydantic import BaseModel
 
 from .gvp_core import GVP, GVPConvLayer, LayerNorm
-from torch_scatter import scatter_mean, scatter_sum
 
 from torch_geometric.nn import TransformerConv, global_mean_pool as gap, global_max_pool as gmp
 
@@ -17,7 +16,7 @@ class ClassifierGNNParams(BaseModel):
   edge_in_dim: tuple[int, int]
   edge_h_dim: tuple[int, int]
   n_categories: int = 10,
-  num_layers: int = 4,
+  num_gvp_layers: int = 4,
   drop_rate: float = 0.1
 
 
@@ -49,7 +48,7 @@ class ClassifierGNN(nn.Module):
   `node_in_dim`: Edge dimensions in input graph. Should be (32, 1) if using original features.
   `edge_h_dim`: Edge dimensions to embed to before use in GVP-GNN layers. Authors use (32, 1).
   `n_categories`: The number of output categories for classification
-  `num_layers`: The number of internal GVP-GNN layers.
+  `num_gvp_layers`: The number of internal GVP-GNN layers.
   `drop_rate`: The rate to use in all dropout layers.
   """
   def __init__(
@@ -59,8 +58,9 @@ class ClassifierGNN(nn.Module):
     edge_in_dim: tuple[int, int],
     edge_h_dim: tuple[int, int],
     n_categories: int = 10,
-    num_layers: int = 3,
-    drop_rate: float = 0.1
+    num_gvp_layers: int = 3,
+    drop_rate: float = 0.1,
+    n_heads: int = 4,
   ):
     super(ClassifierGNN, self).__init__()
     self.n_categories = n_categories
@@ -79,32 +79,30 @@ class ClassifierGNN(nn.Module):
 
     # Apply a variable number of messaging passing updates (with GVPs used internally).
     self.layers = nn.ModuleList(
-      GVPConvLayer(node_h_dim, edge_h_dim, drop_rate=drop_rate) for _ in range(num_layers)
+      GVPConvLayer(node_h_dim, edge_h_dim, drop_rate=drop_rate) for _ in range(num_gvp_layers)
     )
 
-    # Collapse the vector dimension, leaving only the scalar part of the embeddings
-    # at each node. Note that the GVP modules allow information to flow from vector
-    # embeddings to scalar embeddings, so the information in vector embeddings is
-    # not lost during this operation.
+    # Apply one last GVP, and get rid of the vector (R^3) features.
     ns, _ = node_h_dim
     self.W_out = nn.Sequential(
       LayerNorm(node_h_dim),
       GVP(node_h_dim, (ns, 0)),
     )
 
-    self.conv = TransformerConv(
+    # Apply a convolution with attention to help propagate more information around the graph.
+    self.conv1 = TransformerConv(
       node_h_dim[0],
       node_h_dim[0],
       concat=True,
       beta=False,
       dropout=drop_rate,
       edge_dim=None,
-      heads=1,
+      heads=n_heads,
     )
 
     # Final dense block, which receives the average node embedding and outputs logits.
     self.dense = nn.Sequential(
-      nn.Linear(2*ns, 2*ns),
+      nn.Linear(n_heads*2*ns, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
       nn.Linear(2*ns, 2*ns),
@@ -137,7 +135,7 @@ class ClassifierGNN(nn.Module):
       h_V = layer(h_V, edge_index, h_E)
 
     out = self.W_out(h_V)
-    out = self.conv(out, edge_index)
+    out = torch.relu(self.conv1(out, edge_index))
 
     global_features = torch.concat([
       gmp(out, graph_indices),

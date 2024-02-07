@@ -24,7 +24,7 @@ def test_weighted_sampling():
     sampler_weights=dataset.sampler_weights
   )
 
-  dataloader = torch_geometric.data.DataLoader(
+  dataloader = torch_geometric.loader.DataLoader(
     dataset,
     num_workers=1,
     batch_sampler=sampler,

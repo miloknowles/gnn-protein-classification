@@ -35,13 +35,13 @@
 
 
 python train.py --train \
-  --model-id gvp_l3_k10_s100_no_esm2 \
+  --model-id gvp_l3_k50_s100_no_esm2 \
   --train-path ../data/cleaned_skip_missing/train \
   --val-path ../data/cleaned_skip_missing/val \
   --test-path ../data/cleaned_skip_missing/test \
   --max-nodes 3000 \
   --num-workers 4 \
   --gnn-layers 3 \
-  --top-k 10 \
+  --top-k 50 \
   --node-h-scalar-dim 100 \
-  --lr 1e-4
+  --lr 1e-3

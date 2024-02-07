@@ -114,7 +114,7 @@ def train(
 
 def loop(
   model: nn.Module,
-  dataloader: torch_geometric.data.DataLoader,
+  dataloader: torch_geometric.loader.DataLoader,
   optimizer=None,
   n_categories: int = 10,
 ) -> tuple[float, float, float]:

@@ -20,6 +20,7 @@ torch-cluster = "*"
 torch-scatter = "*"
 pydantic = "*"
 pytest = "*"
+pyarrow = "*"
 
 [dev-packages]
 

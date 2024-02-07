@@ -39,6 +39,8 @@ def dataloader_factory(dataset: torch.utils.data.Dataset, args: any) -> torch_ge
     num_workers=args.num_workers,
     batch_sampler=BatchSampler(
       dataset.node_counts,
-      max_nodes=args.max_nodes
+      max_nodes=args.max_nodes,
+      shuffle=True,
+      sampler_weights=dataset.sampler_weights,
     )
   )

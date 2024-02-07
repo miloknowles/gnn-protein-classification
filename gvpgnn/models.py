@@ -59,7 +59,7 @@ class ClassifierGNN(nn.Module):
     edge_h_dim: tuple[int, int],
     n_categories: int = 10,
     num_gvp_layers: int = 3,
-    num_pool_layers: int = 3,
+    num_pool_layers: int = 4,
     drop_rate: float = 0.1,
     n_conv_heads: int = 1,
   ):
@@ -92,25 +92,25 @@ class ClassifierGNN(nn.Module):
     )
 
     # Apply a convolution with attention to help propagate more information around the graph.
-    self.conv1 = TransformerConv(
-      node_h_dim[0],
-      node_h_dim[0],
-      concat=True,
-      beta=False,
-      dropout=drop_rate,
-      edge_dim=None,
-      heads=n_conv_heads,
-    )
+    # self.conv1 = TransformerConv(
+    #   node_h_dim[0],
+    #   node_h_dim[0],
+    #   concat=True,
+    #   beta=False,
+    #   dropout=drop_rate,
+    #   edge_dim=None,
+    #   heads=n_conv_heads,
+    # )
 
-    self.conv2 = TransformerConv(
-      node_h_dim[0],
-      node_h_dim[0],
-      concat=True,
-      beta=False,
-      dropout=drop_rate,
-      edge_dim=None,
-      heads=n_conv_heads,
-    )
+    # self.conv2 = TransformerConv(
+    #   node_h_dim[0],
+    #   node_h_dim[0],
+    #   concat=True,
+    #   beta=False,
+    #   dropout=drop_rate,
+    #   edge_dim=None,
+    #   heads=n_conv_heads,
+    # )
 
     self.conv_layers = nn.ModuleList([])
     self.pooling_layers = nn.ModuleList([])

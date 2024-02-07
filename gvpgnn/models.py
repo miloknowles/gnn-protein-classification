@@ -6,7 +6,7 @@ import torch.nn as nn
 from pydantic import BaseModel
 
 from .gvp_core import GVP, GVPConvLayer, LayerNorm
-from torch_scatter import scatter_mean
+from torch_scatter import scatter_mean, scatter_sum
 
 
 class ClassifierGNNParams(BaseModel):
@@ -133,7 +133,7 @@ class ClassifierGNN(nn.Module):
     if graph_indices is None:
       out = out.mean(dim=0, keepdims=True)
     else:
-      out = scatter_mean(out, graph_indices, dim=0)
+      out = scatter_sum(out, graph_indices, dim=0)
 
     logits = self.dense(out).squeeze(-1)
     return logits

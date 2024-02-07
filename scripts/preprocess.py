@@ -4,7 +4,6 @@ from typing import Optional
 import json
 from collections import defaultdict
 
-import torch
 import pandas as pd
 
 import Bio.PDB.PDBParser
@@ -13,7 +12,6 @@ from Bio.PDB.Polypeptide import protein_letters_3to1
 import gvpgnn.paths as paths
 import gvpgnn.data_models as dm
 # import gvpgnn.embeddings as plm
-from gvpgnn.train_utils import get_best_system_device
 
 
 def check_disjoint_dataset_splits():
@@ -71,9 +69,8 @@ def preprocess(
   device = "cpu"
   print("Using device", device)
 
-  models = {}
-  alphabets = {}
-
+  # models = {}
+  # alphabets = {}
   # for name in plm.esm2_model_dictionary:
   # NOTE(milo): Just pre-process one embedding for now.
   # for name in ["esm2_t33_650M_UR50D"]:

@@ -11,7 +11,7 @@ from Bio.PDB.Polypeptide import protein_letters_3to1
 
 import gvpgnn.paths as paths
 import gvpgnn.data_models as dm
-# import gvpgnn.embeddings as plm
+import gvpgnn.embeddings as plm
 
 
 def check_disjoint_dataset_splits():
@@ -69,14 +69,14 @@ def preprocess(
   device = "cpu"
   print("Using device", device)
 
-  # models = {}
-  # alphabets = {}
+  models = {}
+  alphabets = {}
   # for name in plm.esm2_model_dictionary:
   # NOTE(milo): Just pre-process one embedding for now.
-  # for name in ["esm2_t33_650M_UR50D"]:
-  #   models[name], alphabets[name] = plm.esm2_model_dictionary[name]()
-  #   models[name] = models[name].to(device)
-  #   print(f"Loaded pre-trained protein language model '{name}'")
+  for name in ["esm2_t33_650M_UR50D"]:
+    models[name], alphabets[name] = plm.esm2_model_dictionary[name]()
+    models[name] = models[name].to(device)
+    print(f"Loaded pre-trained protein language model '{name}'")
 
   # Aggregate warnings to get a sense of missing data.
   warn = dict(
@@ -140,14 +140,14 @@ def preprocess(
       coords_each_residue.append(coords)
 
     # Pre-compute embeddings from the language models.
-    # embeddings_by_dim = defaultdict(lambda: None)
-    # for name, model in models.items():
-    #   dim = plm.esm2_embedding_dims[name]
-    #   layer = plm.esm2_embedding_layer[name]
-    #   alphabet = alphabets[name]
-    #   seqstr = "".join(seq).replace("_", "<unk>")
-    #   embeddings = plm.extract_embedding_single(model, alphabet, layer, seqstr, device=device)
-    #   embeddings_by_dim[dim] = embeddings
+    embeddings_by_dim = defaultdict(lambda: None)
+    for name, model in models.items():
+      dim = plm.esm2_embedding_dims[name]
+      layer = plm.esm2_embedding_layer[name]
+      alphabet = alphabets[name]
+      seqstr = "".join(seq).replace("_", "<unk>")
+      embeddings = plm.extract_embedding_single(model, alphabet, layer, seqstr, device=device)
+      embeddings_by_dim[dim] = embeddings
 
     # Gather and standardize all of the data into our datamodel.
     item = dm.ProteinBackboneWithEmbedding(
@@ -163,10 +163,10 @@ def preprocess(
       task_label=dm.architecture_labels[(row["class"], row["architecture"])],
       coords=coords_each_residue,
       # Stored all of the precomputed embeddings.
-      # embedding_320=embeddings_by_dim[320],
-      # embedding_480=embeddings_by_dim[480],
-      # embedding_640=embeddings_by_dim[640],
-      # embedding_1280=embeddings_by_dim[1280],
+      embedding_320=embeddings_by_dim[320],
+      embedding_480=embeddings_by_dim[480],
+      embedding_640=embeddings_by_dim[640],
+      embedding_1280=embeddings_by_dim[1280],
     )
 
     assert(len(coords_each_residue) == len(seq))

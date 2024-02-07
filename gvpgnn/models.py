@@ -95,6 +95,9 @@ class ClassifierGNN(nn.Module):
       nn.Linear(ns, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
+      nn.Linear(2*ns, 2*ns),
+      nn.ReLU(inplace=True),
+      nn.Dropout(p=drop_rate),
       nn.Linear(2*ns, n_categories)
     )
 

@@ -1,5 +1,5 @@
 python train.py --train \
-  --model-id gvp_l3_rad8_s100_no_esm2 \
+  --model-id gvp_l3_rad16_s100_no_esm2 \
   --train-path ../data/cleaned_skip_missing/train \
   --val-path ../data/cleaned_skip_missing/val \
   --test-path ../data/cleaned_skip_missing/test \
@@ -10,4 +10,4 @@ python train.py --train \
   --node-h-scalar-dim 100 \
   --lr 1e-3 \
   --edge-algorithm radius_graph \
-  --r-ball-radius 8.0 \
+  --r-ball-radius 16.0 \

@@ -66,13 +66,13 @@ class ClassifierGNN(nn.Module):
     # Map the NODE embeddings to their hidden dimension.
     self.W_v = nn.Sequential(
       LayerNorm(node_in_dim),
-      GVP(node_in_dim, node_h_dim, activations=(None, None))
+      GVP(node_in_dim, node_h_dim)
     )
 
     # Map the EDGE embeddings to their hidden dimension.
     self.W_e = nn.Sequential(
       LayerNorm(edge_in_dim),
-      GVP(edge_in_dim, edge_h_dim, activations=(None, None))
+      GVP(edge_in_dim, edge_h_dim)
     )
 
     # Apply a variable number of messaging passing updates (with GVPs used internally).

@@ -1,5 +1,5 @@
 python train.py --train \
-  --model-id gvp_l3_k30_s100_no_esm2 \
+  --model-id gvp_l3_k30_s100_no_esm2_layer_norm \
   --train-path ../data/cleaned_skip_missing/train \
   --val-path ../data/cleaned_skip_missing/val \
   --test-path ../data/cleaned_skip_missing/test \

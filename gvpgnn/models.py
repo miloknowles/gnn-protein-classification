@@ -7,7 +7,13 @@ from pydantic import BaseModel
 
 from .gvp_core import GVP, GVPConvLayer, LayerNorm
 
-from torch_geometric.nn import TransformerConv, global_mean_pool as gap, global_max_pool as gmp, TopKPooling
+from torch_geometric.nn import (
+  TransformerConv,
+  global_mean_pool as gap,
+  global_add_pool as gsp,
+  global_max_pool as gmp,
+  TopKPooling
+)
 
 
 class ClassifierGNNParams(BaseModel):
@@ -147,7 +153,7 @@ class ClassifierGNN(nn.Module):
 
     # Final dense block, which receives the pooled features as inputs, and outputs logits.
     self.dense = nn.Sequential(
-      nn.Linear(n_conv_heads*ns*2, 2*ns),
+      nn.Linear(n_conv_heads*ns*3, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
       nn.Linear(2*ns, ns),
@@ -184,6 +190,9 @@ class ClassifierGNN(nn.Module):
 
     x = self.W_out(h_V)
 
+    x = torch.relu(self.conv1(x, _edge_index))
+    x = torch.relu(self.conv2(x, _edge_index))
+
     # global_features = []
     # for i in range(len(self.pooling_layers)):
     #   x = self.conv_layers[i](x, _edge_index)
@@ -192,9 +201,6 @@ class ClassifierGNN(nn.Module):
     #   x, _edge_index, _, _graph_indices, _, _ = self.pooling_layers[i](x, _edge_index, None, _graph_indices)
       # global_features.append(torch.cat([gmp(x, _graph_indices), gap(x, _graph_indices)], dim=-1))
 
-    x = torch.relu(self.conv1(x, edge_index))
-    x = torch.relu(self.conv2(x, edge_index))
-
     # Include max and mean global aggregations to let the network choose.
     # TODO(milo): Could also use a softmax with temperature here, letting the
     # network learn a global pooling operation.
@@ -202,10 +208,11 @@ class ClassifierGNN(nn.Module):
     #   gmp(conv2, graph_indices),
     #   gap(conv2, graph_indices),
     # ], dim=-1)
-      
+
     global_features = torch.concat([
       gmp(x, _graph_indices),
       gap(x, _graph_indices),
+      gsp(x, _graph_indices)
     ], dim=-1)
 
     return self.dense(global_features).squeeze(-1)

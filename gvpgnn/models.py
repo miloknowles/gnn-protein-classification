@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from .gvp_core import GVP, GVPConvLayer, LayerNorm
 from torch_scatter import scatter_mean, scatter_sum
 
+from torch_geometric.nn import TransformerConv, global_mean_pool as gap, global_max_pool as gmp
+
 
 class ClassifierGNNParams(BaseModel):
   node_in_dim: tuple[int, int]
@@ -90,9 +92,19 @@ class ClassifierGNN(nn.Module):
       GVP(node_h_dim, (ns, 0)),
     )
 
+    self.conv = TransformerConv(
+      node_h_dim[0],
+      node_h_dim[0],
+      concat=True,
+      beta=False,
+      dropout=drop_rate,
+      edge_dim=None,
+      heads=1,
+    )
+
     # Final dense block, which receives the average node embedding and outputs logits.
     self.dense = nn.Sequential(
-      nn.Linear(ns, 2*ns),
+      nn.Linear(2*ns, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
       nn.Linear(2*ns, 2*ns),
@@ -125,15 +137,11 @@ class ClassifierGNN(nn.Module):
       h_V = layer(h_V, edge_index, h_E)
 
     out = self.W_out(h_V)
+    out = self.conv(out, edge_index)
 
-    # If we're NOT doing inference over batches, the 0th dimension is the node
-    # dimension. If the input data is batched, then the `graph_indices` input
-    # maps each node index to a graph in the batch. For example, if batch[i] = k,
-    # that means that node i belongs to graph k.
-    if graph_indices is None:
-      out = out.mean(dim=0, keepdims=True)
-    else:
-      out = scatter_sum(out, graph_indices, dim=0)
+    global_features = torch.concat([
+      gmp(out, graph_indices),
+      gap(out, graph_indices)
+    ], dim=-1)
 
-    logits = self.dense(out).squeeze(-1)
-    return logits
+    return self.dense(global_features).squeeze(-1)

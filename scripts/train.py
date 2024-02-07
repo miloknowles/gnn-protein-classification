@@ -28,6 +28,10 @@ if not any([args.train, args.test]) or all([args.train and args.test]):
   raise ValueError("Must specify exactly one of --train or --test")
 
 device = train_utils.get_best_system_device()
+# Unfortunate hack due to limited support on MPS.
+# https://github.com/pytorch/pytorch/issues/77764
+if device == "mps":
+  device = "cpu"
 
 
 def train(

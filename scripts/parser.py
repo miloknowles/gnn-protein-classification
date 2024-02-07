@@ -23,6 +23,7 @@ parser.add_argument('--max-nodes', metavar='N', type=int, default=3000,
 parser.add_argument('--epochs', metavar='N', type=int, default=100,
                     help='Training epochs')
 parser.add_argument('--lr', type=float, default=1e-3, help="The learning rate for Adam optimizer")
+parser.add_argument('--drop-rate', type=float, default=0.1, help="The dropout rate")
 
 parser.add_argument('--plm', choices=[*embeddings.esm2_model_dictionary.keys(), None], 
                     default=None, help="Which pretrained protein language model to use (default None)")

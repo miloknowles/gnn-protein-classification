@@ -8,4 +8,4 @@ python train.py --train \
   --gnn-layers 3 \
   --top-k 30 \
   --node-h-scalar-dim 100 \
-  --lr 1e-3
+  --lr 1e-4

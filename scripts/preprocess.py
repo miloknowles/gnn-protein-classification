@@ -12,7 +12,7 @@ from Bio.PDB.Polypeptide import protein_letters_3to1
 
 import gvpgnn.paths as paths
 import gvpgnn.data_models as dm
-import gvpgnn.embeddings as plm
+# import gvpgnn.embeddings as plm
 from gvpgnn.train_utils import get_best_system_device
 
 

@@ -1,5 +1,5 @@
 python train.py --train \
-  --model-id gvp_l3_k30_s100_no_esm2_conv2 \
+  --model-id gvp_l3_k30_s100_650M_conv2 \
   --train-path ../data/cleaned_skip_missing/train \
   --val-path ../data/cleaned_skip_missing/val \
   --test-path ../data/cleaned_skip_missing/test \
@@ -10,4 +10,3 @@ python train.py --train \
   --node-h-scalar-dim 100 \
   --lr 1e-4 \
   --plm esm2_t33_650M_UR50D \
-  

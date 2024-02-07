@@ -65,14 +65,14 @@ class ClassifierGNN(nn.Module):
 
     # Map the NODE embeddings to their hidden dimension.
     self.W_v = nn.Sequential(
-      GVP(node_in_dim, node_h_dim, activations=(None, None)),
-      LayerNorm(node_h_dim),
+      LayerNorm(node_in_dim),
+      GVP(node_in_dim, node_h_dim, activations=(None, None))
     )
 
     # Map the EDGE embeddings to their hidden dimension.
     self.W_e = nn.Sequential(
-      GVP(edge_in_dim, edge_h_dim, activations=(None, None)),
-      LayerNorm(edge_h_dim),
+      LayerNorm(edge_in_dim),
+      GVP(edge_in_dim, edge_h_dim, activations=(None, None))
     )
 
     # Apply a variable number of messaging passing updates (with GVPs used internally).
@@ -86,8 +86,8 @@ class ClassifierGNN(nn.Module):
     # not lost during this operation.
     ns, _ = node_h_dim
     self.W_out = nn.Sequential(
-      GVP(node_h_dim, (ns, 0)),
-      LayerNorm((ns, 0))
+      LayerNorm(node_h_dim),
+      GVP(node_h_dim, (ns, 0))
     )
 
     # Final dense block, which receives the average node embedding and outputs logits.

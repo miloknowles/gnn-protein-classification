@@ -86,7 +86,7 @@ class ClassifierGNN(nn.Module):
     # not lost during this operation.
     ns, _ = node_h_dim
     self.W_out = nn.Sequential(
-      GVP(node_h_dim, (ns, 0), activations=(None, None)),
+      GVP(node_h_dim, (ns, 0)),
       LayerNorm(node_h_dim)
     )
 

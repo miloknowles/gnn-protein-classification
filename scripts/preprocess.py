@@ -2,7 +2,9 @@ import sys; sys.path.append("..")
 import os
 from typing import Optional
 import json
+from collections import defaultdict
 
+import torch
 import pandas as pd
 
 import Bio.PDB.PDBParser
@@ -10,6 +12,8 @@ from Bio.PDB.Polypeptide import protein_letters_3to1
 
 import gvpgnn.paths as paths
 import gvpgnn.data_models as dm
+import gvpgnn.embeddings as plm
+from gvpgnn.train_utils import get_best_system_device
 
 
 def check_disjoint_dataset_splits():
@@ -31,6 +35,7 @@ def check_disjoint_dataset_splits():
 
 def preprocess(
   split_path: str,
+  output_folder: str,
   pdb_folder: str = paths.data_folder("pdb_share"),
   limit: Optional[int] = None,
   handle_bad_residue: str = "drop",
@@ -62,6 +67,19 @@ def preprocess(
   df_split = pd.read_csv(split_path)
 
   data_list = []
+  # device = get_best_system_device()
+  device = "cpu"
+  print("Using device", device)
+
+  models = {}
+  alphabets = {}
+
+  # for name in plm.esm2_model_dictionary:
+  # NOTE(milo): Just pre-process one embedding for now.
+  for name in ["esm2_t33_650M_UR50D"]:
+    models[name], alphabets[name] = plm.esm2_model_dictionary[name]()
+    models[name] = models[name].to(device)
+    print(f"Loaded pre-trained protein language model '{name}'")
 
   # Aggregate warnings to get a sense of missing data.
   warn = dict(
@@ -124,8 +142,18 @@ def preprocess(
 
       coords_each_residue.append(coords)
 
+    # Pre-compute embeddings from the language models.
+    embeddings_by_dim = defaultdict(lambda: None)
+    for name, model in models.items():
+      dim = plm.esm2_embedding_dims[name]
+      layer = plm.esm2_embedding_layer[name]
+      alphabet = alphabets[name]
+      seqstr = "".join(seq).replace("_", "<unk>")
+      embeddings = plm.extract_embedding_single(model, alphabet, layer, seqstr, device=device)
+      embeddings_by_dim[dim] = embeddings
+
     # Gather and standardize all of the data into our datamodel.
-    item = dm.BackboneModel(
+    item = dm.ProteinBackboneWithEmbedding(
       name=row.cath_id,
       seq="".join(seq),
       pdb_id=row.pdb_id,
@@ -136,28 +164,42 @@ def preprocess(
       superfamily=row.superfamily,
       # This is the label that the model will learn to predict!
       task_label=dm.architecture_labels[(row["class"], row["architecture"])],
-      coords=coords_each_residue
+      coords=coords_each_residue,
+      # Stored all of the precomputed embeddings.
+      embedding_320=embeddings_by_dim[320],
+      embedding_480=embeddings_by_dim[480],
+      embedding_640=embeddings_by_dim[640],
+      embedding_1280=embeddings_by_dim[1280],
     )
 
     assert(len(coords_each_residue) == len(seq))
 
     data_list.append(item)
 
+    # Write the JSON output for this item:
+    with open(os.path.join(output_folder, f"{item.cath_id}.json"), "w") as f:
+      json.dump(item.model_dump(), f, indent=2)
+
   return data_list, warn
 
 
 if __name__ == "__main__":
-  check_disjoint_dataset_splits()
+  # check_disjoint_dataset_splits()
 
-  dataset_version = "cleaned_skip_missing"
+  dataset_version = "cleaned_with_embeddings"
 
   for split_name in ("train", "test", "val"):
     print(f"\n\n-------- {split_name} --------")
+    
+    if not os.path.exists(paths.data_folder(f"{dataset_version}/{split_name}")):
+      os.makedirs(paths.data_folder(f"{dataset_version}/{split_name}"))
+
     split_path = paths.data_folder(f"{split_name}_cath_w_seqs_share.csv")
 
     # NOTE(milo): You can set a small `limit` here for debugging purposes.
     data, warnings = preprocess(
       split_path,
+      paths.data_folder(f"{dataset_version}/{split_name}"),
       pdb_folder=paths.data_folder("pdb_share"),
       limit=None
     )
@@ -166,11 +208,3 @@ if __name__ == "__main__":
 
     print("\nWARNINGS:")
     print(warnings)
-
-    if not os.path.exists(paths.data_folder(f"{dataset_version}/{split_name}")):
-      os.makedirs(paths.data_folder(f"{dataset_version}/{split_name}"))
-
-    # Write the JSON data to a file for each split:
-    for item in data:
-      with open(paths.data_folder(f"{dataset_version}/{split_name}/{item.cath_id}.json"), "w") as f:
-        json.dump(item.dict(), f, indent=2)

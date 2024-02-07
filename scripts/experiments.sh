@@ -21,7 +21,7 @@
 #   --top-k 30 \
 
 python train.py --train \
-  --model-id gvp_l3_k10_esm2_t33_650M_UR50D \
+  --model-id gvp_l3_k10_s200_esm2_t33_650M_UR50D \
   --train-path ../data/cleaned_skip_missing/train \
   --val-path ../data/cleaned_skip_missing/val \
   --test-path ../data/cleaned_skip_missing/test \
@@ -29,4 +29,5 @@ python train.py --train \
   --num-workers 4 \
   --gnn-layers 3 \
   --top-k 10 \
+  --node-h-scalar-dim 200 \
   --plm esm2_t33_650M_UR50D \

@@ -22,11 +22,13 @@ parser.add_argument('--max-nodes', metavar='N', type=int, default=3000,
                     help='Max number of nodes per batch')
 parser.add_argument('--epochs', metavar='N', type=int, default=100,
                     help='Training epochs')
+parser.add_argument('--lr', type=float, default=1e-3, help="The learning rate for Adam optimizer")
 
 parser.add_argument('--plm', choices=[*embeddings.esm2_model_dictionary.keys(), None], 
                     default=None, help="Which pretrained protein language model to use (default None)")
 parser.add_argument('--top-k', type=int, default=30, help="How many k-nearest neighbors to connect in the GNN")
 parser.add_argument('--gnn-layers', type=int, default=4, help="Number of GVP layers in the GNN")
+parser.add_argument('--node-h-scalar-dim', type=int, default=100, help="The dimensionality for node scalar embeddings in the GNN")
 
 parser.add_argument('--train', action="store_true", help="Train a model from scratch or from a checkpoint.")
 parser.add_argument('--test', action="store_true", help="Test a trained model")

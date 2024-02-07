@@ -31,7 +31,8 @@ def extract_embedding_single(
   model: torch.nn.Module,
   alphabet: esm.Alphabet,
   model_embedding_layer: int,
-  sequence: str
+  sequence: str,
+  device: str = "cpu"
 ) -> torch.Tensor:
   """Returns an embedding of shape `(num tokens, embedding dim)`."""
   model.eval()
@@ -41,7 +42,7 @@ def extract_embedding_single(
   with torch.no_grad():
     _, _, batch_tokens = batch_converter([("tmp", sequence)])
 
-    results = model(batch_tokens, repr_layers=[model_embedding_layer], return_contacts=False)
+    results = model(batch_tokens.to(device), repr_layers=[model_embedding_layer], return_contacts=False)
 
     # Skip the first and last token, since this is a start and end.
     token_representations = results["representations"][model_embedding_layer][:,1:-1,:].squeeze(0)

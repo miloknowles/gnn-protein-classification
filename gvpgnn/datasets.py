@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import torch_geometric
 import torch_cluster
 import gvpgnn.embeddings as embeddings
-from gvpgnn.data_models import BackboneModel
+from gvpgnn.data_models import ProteinBackboneWithEmbedding
 
 
 def _normalize(tensor, dim=-1):
@@ -107,7 +107,7 @@ class ProteinGraphDataset(data.Dataset):
     # Open up each file to see how many nodes it contains:
     for i, filename in enumerate(self.filenames):
       with open(filename, "r") as f:
-        m = BackboneModel.model_validate(json.load(f))
+        m = ProteinBackboneWithEmbedding.model_validate(json.load(f))
         self.node_counts[i] = len(m.seq)
         self.label_counts[m.task_label] += 1
         self.node_labels[i] = m.task_label

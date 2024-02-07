@@ -43,7 +43,7 @@ def train(
   val_loader = train_utils.dataloader_factory(valset, args)
   test_loader = train_utils.dataloader_factory(testset, args)
 
-  optimizer = torch.optim.Adam(model.parameters())
+  optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
   # Keep track of the best model so far, and its loss on the validation set.
   best_path, best_val_loss = None, np.inf
@@ -191,7 +191,7 @@ def main():
   # If using language model embeddings, these are concatenated with the scalar
   # features for each node.
   node_in_dim = (6 + plm_embedding_dim, 3) # num scalar, num vector
-  node_h_dim = (100, 16) # num scalar, num vector
+  node_h_dim = (args.node_h_scalar_dim, 16) # num scalar, num vector
   edge_in_dim = (32, 1) # num scalar, num vector
   edge_h_dim = (32, 10) # num scalar, num vector
 

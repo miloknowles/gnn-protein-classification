@@ -21,12 +21,12 @@
 #   --top-k 30 \
 
 python train.py --train \
-  --model-id gvp_l4_k30_esm2_8m_test_weighted \
+  --model-id gvp_l3_k10_esm2_t33_650M_UR50D \
   --train-path ../data/cleaned_skip_missing/train \
   --val-path ../data/cleaned_skip_missing/val \
   --test-path ../data/cleaned_skip_missing/test \
   --max-nodes 3000 \
   --num-workers 4 \
-  --gnn-layers 4 \
-  --top-k 30 \
-  --plm esm2_t6_8M_UR50D \
+  --gnn-layers 3 \
+  --top-k 10 \
+  --plm esm2_t33_650M_UR50D \

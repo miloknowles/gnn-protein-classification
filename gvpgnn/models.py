@@ -15,7 +15,7 @@ class ClassifierGNNParams(BaseModel):
   edge_in_dim: tuple[int, int]
   edge_h_dim: tuple[int, int]
   n_categories: int = 10,
-  num_layers: int = 3,
+  num_layers: int = 4,
   drop_rate: float = 0.1
 
 
@@ -46,6 +46,7 @@ class ClassifierGNN(nn.Module):
   `node_h_dim`: Node dimensions to use in internal GVP-GNN layers. Authors use (100, 16).
   `node_in_dim`: Edge dimensions in input graph. Should be (32, 1) if using original features.
   `edge_h_dim`: Edge dimensions to embed to before use in GVP-GNN layers. Authors use (32, 1).
+  `n_categories`: The number of output categories for classification
   `num_layers`: The number of internal GVP-GNN layers.
   `drop_rate`: The rate to use in all dropout layers.
   """
@@ -60,6 +61,7 @@ class ClassifierGNN(nn.Module):
     drop_rate: float = 0.1
   ):
     super(ClassifierGNN, self).__init__()
+    self.n_categories = n_categories
 
     # Map the NODE embeddings to their hidden dimension.
     self.W_v = nn.Sequential(
@@ -73,31 +75,28 @@ class ClassifierGNN(nn.Module):
       GVP(edge_in_dim, edge_h_dim, activations=(None, None))
     )
 
-    # Apply a variable number of Geometric Vector Perceptron (GVP) updates.
+    # Apply a variable number of messaging passing updates (with GVPs used internally).
     self.layers = nn.ModuleList(
       GVPConvLayer(node_h_dim, edge_h_dim, drop_rate=drop_rate) for _ in range(num_layers)
     )
-    
+
     # Collapse the vector dimension, leaving only the scalar part of the embeddings
     # at each node. Note that the GVP modules allow information to flow from vector
     # embeddings to scalar embeddings, so the information in vector embeddings is
     # not lost during this operation.
-    node_scalar_dim, _ = node_h_dim
+    ns, _ = node_h_dim
     self.W_out = nn.Sequential(
       LayerNorm(node_h_dim),
-      GVP(node_h_dim, (node_scalar_dim, 0))
+      GVP(node_h_dim, (ns, 0))
     )
 
-    # The final block of the network, which maps final node embeddings to the
-    # dimensionality of the output.
+    # Final dense block, which receives the average node embedding and outputs logits.
     self.dense = nn.Sequential(
-      nn.Linear(node_scalar_dim, 2*node_scalar_dim),
+      nn.Linear(ns, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(2*node_scalar_dim, n_categories)
+      nn.Linear(2*ns, n_categories)
     )
-
-    self.n_categories = n_categories
 
   def forward(
     self,
@@ -109,9 +108,12 @@ class ClassifierGNN(nn.Module):
     """
     Outputs the categorical distribution over labels.
 
-    h_V: tuple (s, V) of node embeddings
-    edge_index: `torch.Tensor` of shape [2, num_edges]
-    h_E: tuple (s, V) of edge embeddings
+    Parameters
+    ----------
+    * `h_V`: tuple (s, V) of node embeddings
+    * `edge_index`: `torch.Tensor` of shape [2, num_edges]
+    * `h_E`: tuple (s, V) of edge embeddings
+    * `graph_indices`: the graph index that each node belongs to
     """
     h_V = self.W_v(h_V)
     h_E = self.W_e(h_E)

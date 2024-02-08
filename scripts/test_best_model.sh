@@ -1,11 +1,9 @@
-python train.py --train \
-  --model-id gvp_l3_k30_s100_650M_topk_pl3_ch3 \
-  --train-path ../data/cleaned_with_esm2_t33_650M_UR50D/train \
-  --val-path ../data/cleaned_with_esm2_t33_650M_UR50D/val \
+python train.py --test \
+  --model-id gvp_l2_k30_s100_650M_topk_pl3_ch3 \
   --test-path ../data/cleaned_with_esm2_t33_650M_UR50D/test \
   --max-nodes 3000 \
   --num-workers 6 \
-  --gnn-layers 3 \
+  --gnn-layers 2 \
   --top-k 30 \
   --node-h-scalar-dim 100 \
   --lr 1e-4 \

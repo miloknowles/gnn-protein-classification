@@ -158,7 +158,9 @@ if __name__ == "__main__":
   If you're just trying to evaluate a pre-trained model, you'll want to run a command like:
 
   ```
-  python preprocess.py --csv challenge_test_set.csv --output-folder ../data/challenge_test_set
+  python preprocess.py --csv challenge_test_set.csv \
+    --output-folder ../data/challenge_test_set \
+    --pdb-folder ../data/pdb_share
   ```
   where the CSV file follows the same format as `cath_w_seqs_share.csv`.
 
@@ -177,7 +179,9 @@ if __name__ == "__main__":
   parser.add_argument('--csv', type=str, help="The path to a `<split>_cath_w_seqs_share.csv` file", default=None)
   parser.add_argument('--output-folder', type=str, help="The output folder for preprocessed JSON files", default=None)
   parser.add_argument('--all', action="store_true", help="Process all of the splits at once.", default=False)
-  
+  parser.add_argument('--pdb-folder', type=str, help="The path to a folder with PDB files in it (e.g pdb_share/)",
+                      default=paths.data_folder("pdb_share"))
+
   args = parser.parse_args()
 
   # NOTE(milo): This code is for my training process only; you shouldn't need to run it.
@@ -197,7 +201,7 @@ if __name__ == "__main__":
       data, warnings = preprocess(
         split_path,
         paths.data_folder(f"{dataset_version}/{split_name}"),
-        pdb_folder=paths.data_folder("pdb_share"),
+        pdb_folder=args.pdb_folder,
         limit=None
       )
 
@@ -214,7 +218,7 @@ if __name__ == "__main__":
     data, warnings = preprocess(
       args.csv,
       args.output_folder,
-      pdb_folder=paths.data_folder("pdb_share"),
+      pdb_folder=args.pdb_folder,
       limit=None
     )
 

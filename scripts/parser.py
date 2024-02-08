@@ -39,6 +39,6 @@ parser.add_argument('--n-pool-layers', type=int, default=3, help="The number of 
 parser.add_argument('--train', action="store_true", help="Train a model from scratch or from a checkpoint.")
 parser.add_argument('--test', action="store_true", help="Test a trained model")
 
-parser.add_argument('--train-path', type=str, help="The path to a JSON file with TRAINING data. Only required with --train.")
-parser.add_argument('--val-path', type=str, help="The path to a JSON file with VALIDATION data. Only required with --train.")
-parser.add_argument('--test-path', type=str, help="The path to a JSON file with TEST data.")
+parser.add_argument('--train-path', type=str, help="The path to a folder with TRAINING data. Only required with --train.", default=None)
+parser.add_argument('--val-path', type=str, help="The path to a folder with VALIDATION data. Only required with --train.", default=None)
+parser.add_argument('--test-path', type=str, help="The path to a folder with TEST data. Only required with --test.", default=None)

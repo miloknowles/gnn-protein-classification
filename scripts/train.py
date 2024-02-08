@@ -245,7 +245,10 @@ def main():
     )
     train(model, train_params, trainset, valset, testset)
 
-  else:
+  elif args.test:
+    if args.test_path is None:
+      raise ValueError("You need to provide a --test-path to a folder with data!")
+    print("----- TESTING MODE -----")
     testset = datasets.ProteinGraphDataset(args.test_path)
 
 

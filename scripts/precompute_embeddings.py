@@ -12,10 +12,12 @@ import gvpgnn.embeddings as plm
 
 if __name__ == "__main__":
   device = "cuda" if torch.cuda.is_available() else "cpu"
+  print(device)
+  print(f"Using device '{device}'")
 
-  name = "esm2_t33_650M_UR50D" # ESM2
+  name = "esm2_t33_650M_UR50D"
   # name = "esm2_t6_8M_UR50D" 
-  print(f"Loading model {name}")
+  print(f"Loading model '{name}'")
 
   # Read in a dataset folder, and output a new one with embeddings included.
   in_dataset_folder = paths.data_folder("cleaned_skip_missing")
@@ -66,7 +68,7 @@ if __name__ == "__main__":
 
         # Add the embedding for this model to the file contents.
         for j in range(len(chunk_contents)):
-          chunk_contents[j][name] = sequence_representations[j].numpy().tolist()
+          chunk_contents[j][name] = sequence_representations[j].cpu().numpy().tolist()
 
           # Write the new file.
           with open(os.path.join(out_dataset_folder, split_name, f'{chunk_contents[j]["cath_id"]}.json'), "w") as f:

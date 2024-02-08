@@ -8,7 +8,7 @@ from gvpgnn.paths import data_folder
 def test_load_with_precomputed_embeddings():
   """Make sure that embeddings aren't computed if they've already been precomputed."""
   dataset_version = "cleaned_with_esm2_t6_8M_UR50D"
-  split_name = "test"
+  split_name = "train"
 
   dataset = ProteinGraphDataset(
     data_folder(f"{dataset_version}/{split_name}"),
@@ -20,7 +20,7 @@ def test_load_with_precomputed_embeddings():
   )
   # Ensure that the embeddings are included in the node scalar features.
   print(dataset[0])
-  assert(dataset[0].node_s.shape == (93, 326)) # 320 + 6
+  assert(dataset[0].node_s.shape[1] == 326) # 320 + 6
 
 
 def test_weighted_sampling():

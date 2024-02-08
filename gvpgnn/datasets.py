@@ -140,9 +140,9 @@ class ProteinGraphDataset(data.Dataset):
     """Load the filename with index `i` and featurize it."""
     with open(self.filenames[i], "r") as f:
       data = json.load(f)
-      return self._featurize_as_graph(data)
+      return self._featurize_as_graph(data, i)
   
-  def _featurize_as_graph(self, protein) -> dict:
+  def _featurize_as_graph(self, protein, i: int) -> dict:
     name = protein['name']
     with torch.no_grad():
       coords = torch.as_tensor(
@@ -174,11 +174,8 @@ class ProteinGraphDataset(data.Dataset):
       # The node scalar features can optionally include embeddings (by concatenating).
       if self.plm is not None:
         if self.precomputed_embeddings:
-          if self.plm not in protein:
-            raise NotImplementedError(
-              f"The precomputed embeddings from '{self.plm}' were not found in the dataset. Did you precompute?"
-            )
-          node_embedding = torch.Tensor(protein[self.plm])
+          # TODO(milo): Hacky but works.
+          node_embedding = torch.load(self.filenames[i].replace(".json", ".pt"))
         else:
           node_embedding = embeddings.extract_embedding_single(
             self.plm_model,

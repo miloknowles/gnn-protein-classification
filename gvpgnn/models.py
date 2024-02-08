@@ -209,18 +209,12 @@ class ClassifierGNN(nn.Module):
       nn.Linear(node_in_dim[0], ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      # nn.Linear(ns, ns),
-      # nn.ReLU(inplace=True),
-      # nn.Dropout(p=drop_rate),
     )
 
     self.W_features_out = nn.Sequential(
       nn.Linear(node_in_dim[0], ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      # nn.Linear(ns, ns),
-      # nn.ReLU(inplace=True),
-      # nn.Dropout(p=drop_rate),
     )
 
     # Map the NODE embeddings to their hidden dimension.
@@ -262,10 +256,10 @@ class ClassifierGNN(nn.Module):
 
     # Final dense block, which receives the pooled features as inputs, and outputs logits.
     self.dense = nn.Sequential(
-      nn.Linear(self.pooling_op.get_output_dim() + 3*ns, 4*ns),
+      nn.Linear(self.pooling_op.get_output_dim() + 3*ns, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(4*ns, 2*ns),
+      nn.Linear(2*ns, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
       nn.Linear(2*ns, n_categories)

@@ -27,8 +27,9 @@ class ClassifierGNNParams(BaseModel):
   edge_in_dim: tuple[int, int]
   edge_h_dim: tuple[int, int]
   n_categories: int = 10
-  num_gvp_layers: int = 3
-  num_pool_layers: int = 3
+  n_gvp_layers: int = 3
+  n_pool_layers: int = 3
+  n_conv_heads: int = 1
   drop_rate: float = 0.1
   pooling_op: str = "conv"
 
@@ -138,7 +139,7 @@ class TopKPoolingBlock(nn.Module):
           beta=False,
           dropout=drop_rate,
           edge_dim=None,
-          heads=1,
+          heads=n_conv_heads,
         )
       )
       self.transf_layers.append(
@@ -204,7 +205,7 @@ class ClassifierGNN(nn.Module):
   `node_in_dim`: Edge dimensions in input graph. Should be (32, 1) if using original features.
   `edge_h_dim`: Edge dimensions to embed to before use in GVP-GNN layers. Authors use (32, 1).
   `n_categories`: The number of output categories for classification
-  `num_gvp_layers`: The number of internal GVP-GNN layers.
+  `n_gvp_layers`: The number of internal GVP-GNN layers.
   `drop_rate`: The rate to use in all dropout layers.
   """
   def __init__(
@@ -214,8 +215,8 @@ class ClassifierGNN(nn.Module):
     edge_in_dim: tuple[int, int],
     edge_h_dim: tuple[int, int],
     n_categories: int = 10,
-    num_gvp_layers: int = 3,
-    num_pool_layers: int = 3,
+    n_gvp_layers: int = 3,
+    n_pool_layers: int = 3,
     drop_rate: float = 0.1,
     n_conv_heads: int = 1,
     pooling_op: str = "topk"
@@ -248,7 +249,7 @@ class ClassifierGNN(nn.Module):
 
     # Apply a variable number of GVP-style messaging passing updates.
     self.gvp_conv_layers = nn.ModuleList(
-      GVPConvLayer(node_h_dim, edge_h_dim, drop_rate=drop_rate) for _ in range(num_gvp_layers)
+      GVPConvLayer(node_h_dim, edge_h_dim, drop_rate=drop_rate) for _ in range(n_gvp_layers)
     )
 
     # Apply one last GVP, and get rid of the vector (R^3) features in the process.
@@ -262,11 +263,11 @@ class ClassifierGNN(nn.Module):
       self.pooling_op = NaiveGlobalPooling(node_h_dim[0])
     elif pooling_op == "conv":
       self.pooling_op = TransformerConvPoolingBlock(
-          node_h_dim[0], n_conv_layers=num_pool_layers, n_conv_heads=n_conv_heads, drop_rate=drop_rate
+          node_h_dim[0], n_conv_layers=n_pool_layers, n_conv_heads=n_conv_heads, drop_rate=drop_rate
       )
     elif pooling_op == "topk":
       self.pooling_op = TopKPoolingBlock(
-        node_h_dim[0], n_pool_layers=num_pool_layers, n_conv_heads=n_conv_heads, drop_rate=drop_rate
+        node_h_dim[0], n_pool_layers=n_pool_layers, n_conv_heads=n_conv_heads, drop_rate=drop_rate
       )
     else:
       raise NotImplementedError(f"Unrecognized pooling operation {pooling_op}.")

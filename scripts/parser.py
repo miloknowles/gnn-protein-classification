@@ -33,6 +33,8 @@ parser.add_argument('--r-ball-radius', type=float, default=8, help="Radius for r
 parser.add_argument('--gnn-layers', type=int, default=4, help="Number of GVP layers in the GNN")
 parser.add_argument('--node-h-scalar-dim', type=int, default=100, help="The dimensionality for node scalar embeddings in the GNN")
 parser.add_argument('--pooling-op', choices=["naive", "conv", "topk"], default="conv", help="The pooling operation to use")
+parser.add_argument('--n-conv-heads', type=int, default=1, help="The number of heads in Transformer layers")
+parser.add_argument('--n-pool-layers', type=int, default=3, help="The number of pooling layers to apply")
 
 parser.add_argument('--train', action="store_true", help="Train a model from scratch or from a checkpoint.")
 parser.add_argument('--test', action="store_true", help="Test a trained model")

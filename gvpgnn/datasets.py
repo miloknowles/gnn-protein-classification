@@ -75,7 +75,8 @@ class ProteinGraphDataset(data.Dataset):
     r_ball_radius: float = 8, # angstroms
     virtual_node: bool = True,
     plm: Optional[str] = "esm2_t6_8M_UR50D",
-    device: str = "cpu"
+    device: str = "cpu",
+    precomputed_embeddings: bool = True
   ):
     super(ProteinGraphDataset, self).__init__()
     
@@ -88,9 +89,10 @@ class ProteinGraphDataset(data.Dataset):
     self.virtual_node = virtual_node
     self.plm = plm
     self.device = device
+    self.precomputed_embeddings = precomputed_embeddings
 
     # If a protein language model is given, initialize it here.
-    if self.plm is not None:
+    if not self.precomputed_embeddings:
       self.plm_model, self.plm_alphabet = embeddings.esm2_model_dictionary[self.plm]()
       self.plm_embedding_dim = embeddings.esm2_embedding_dims[self.plm]
       self.plm_layer = embeddings.esm2_embedding_layer[self.plm]
@@ -171,14 +173,19 @@ class ProteinGraphDataset(data.Dataset):
       
       # The node scalar features can optionally include embeddings (by concatenating).
       if self.plm is not None:
-        node_embedding = embeddings.extract_embedding_single(
-          self.plm_model,
-          self.plm_alphabet,
-          self.plm_layer,
-          # Can pass unknown/missing residues to the language model:
-          # TODO(milo): What are the '.' '-' and '<mask>' tokens used for?
-          protein['seq'].replace('_', '<unk>')
-        )
+        if self.precomputed_embeddings:
+          if self.plm not in protein:
+            raise NotImplementedError(f"The precomputed embeddings from '{self.plm}' were not found in the dataset. Did you precompute?")
+          node_embedding = torch.Tensor(protein[self.plm])
+        else:
+          node_embedding = embeddings.extract_embedding_single(
+            self.plm_model,
+            self.plm_alphabet,
+            self.plm_layer,
+            # Can pass unknown/missing residues to the language model:
+            # TODO(milo): What are the '.' '-' and '<mask>' tokens used for?
+            protein['seq'].replace('_', '<unk>')
+          )
         node_s = torch.concat([dihedrals, node_embedding], dim=-1)
       else:
         node_s = dihedrals

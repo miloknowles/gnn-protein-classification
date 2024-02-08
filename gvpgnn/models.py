@@ -298,14 +298,14 @@ class ClassifierGNN(nn.Module):
     x = self.W_out(h_V)
     x = self.pooling_op(x, edge_index, graph_indices)
 
-    # f_Vs_out = self.W_features_out(h_V[0])
+    f_Vs_out = self.W_features_out(h_V[0])
 
     # Create a skip connection from the initial features to the final prediction.
     x = torch.concat([
       x,
-      gmp(f_Vs_in, graph_indices),
-      gap(f_Vs_in, graph_indices),
-      gsp(f_Vs_in, graph_indices)
+      gmp(f_Vs_out, graph_indices),
+      gap(f_Vs_out, graph_indices),
+      gsp(f_Vs_out, graph_indices)
     ], dim=-1)
 
     return self.dense(x).squeeze(-1)

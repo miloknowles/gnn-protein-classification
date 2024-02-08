@@ -2,7 +2,6 @@ import sys; sys.path.append("..")
 import os
 from typing import Optional
 import json
-from collections import defaultdict
 
 import pandas as pd
 
@@ -11,7 +10,6 @@ from Bio.PDB.Polypeptide import protein_letters_3to1
 
 import gvpgnn.paths as paths
 import gvpgnn.data_models as dm
-import gvpgnn.embeddings as plm
 
 
 def check_disjoint_dataset_splits():
@@ -65,18 +63,6 @@ def preprocess(
   df_split = pd.read_csv(split_path)
 
   data_list = []
-  # device = get_best_system_device()
-  device = "cpu"
-  print("Using device", device)
-
-  models = {}
-  alphabets = {}
-  for name in plm.esm2_model_dictionary:
-  # NOTE(milo): Just pre-process one embedding for now.
-  # for name in ["esm2_t33_650M_UR50D"]:
-    models[name], alphabets[name] = plm.esm2_model_dictionary[name]()
-    models[name] = models[name].to(device)
-    print(f"Loaded pre-trained protein language model '{name}'")
 
   # Aggregate warnings to get a sense of missing data.
   warn = dict(
@@ -139,16 +125,6 @@ def preprocess(
 
       coords_each_residue.append(coords)
 
-    # Pre-compute embeddings from the language models.
-    embeddings_by_dim = defaultdict(lambda: None)
-    for name, model in models.items():
-      dim = plm.esm2_embedding_dims[name]
-      layer = plm.esm2_embedding_layer[name]
-      alphabet = alphabets[name]
-      seqstr = "".join(seq).replace("_", "<unk>")
-      embeddings = plm.extract_embedding_single(model, alphabet, layer, seqstr, device=device)
-      embeddings_by_dim[dim] = embeddings
-
     # Gather and standardize all of the data into our datamodel.
     item = dm.ProteinBackboneWithEmbedding(
       name=row.cath_id,
@@ -162,11 +138,6 @@ def preprocess(
       # This is the label that the model will learn to predict!
       task_label=dm.architecture_labels[(row["class"], row["architecture"])],
       coords=coords_each_residue,
-      # Stored all of the precomputed embeddings.
-      embedding_320=embeddings_by_dim[320],
-      embedding_480=embeddings_by_dim[480],
-      embedding_640=embeddings_by_dim[640],
-      embedding_1280=embeddings_by_dim[1280],
     )
 
     assert(len(coords_each_residue) == len(seq))
@@ -181,22 +152,68 @@ def preprocess(
 
 
 if __name__ == "__main__":
-  # check_disjoint_dataset_splits()
+  """
+  Preprocess data for training and/or inference.
 
-  dataset_version = "cleaned_with_embeddings"
+  If you're just trying to evaluate a pre-trained model, you'll want to run a command like:
 
-  for split_name in ("train", "test", "val"):
-    print(f"\n\n-------- {split_name} --------")
+  ```
+  python preprocess.py --csv challenge_test_set.csv --output-folder ../data/challenge_test_set
+  ```
+  where the CSV file follows the same format as `cath_w_seqs_share.csv`.
+
+  You should see a printout like:
+  ...
+  -- ROW 494/1261
+  SVKDPTLLRIKIVPVQPFIANSRKQLDLWASSHLLSMLMYKALEVIVDKFGPEHVIYPSLRDQPFFLKFYLGENIGDEILVANLPNKALAIVSGKEAEKIEEEIKKRIRDFLLQLYREAVDWAVENGVVKVDRSEKDSMLKEAYLKIVREYFTVSITWVSLAIYPLLVKILDSLGERKVTEEGWKCHVCGENLAIFGDMYDHDNLKSLWLDEEPLCPMCLIKRYYPVWIRSKTGQKIRFE
+  -- ROW 495/1261
+  WKEAHFQDAFSSFQAMYAKSYATEEEKQRRYAIFKNNLVYIHTHNQQGYSYSLKMNHFGDLSRDEFRRKYLGFKK
+  -- ROW 496/1261
+  ...
+  """
+  import argparse
+  parser = argparse.ArgumentParser()
+
+  parser.add_argument('--csv', type=str, help="The path to a `<split>_cath_w_seqs_share.csv` file", default=None)
+  parser.add_argument('--output-folder', type=str, help="The output folder for preprocessed JSON files", default=None)
+  parser.add_argument('--all', action="store_true", help="Process all of the splits at once.", default=False)
+  
+  args = parser.parse_args()
+
+  # NOTE(milo): This code is for my training process only; you shouldn't need to run it.
+  if args.all:
+    # check_disjoint_dataset_splits()
+    dataset_version = "cleaned_skip_missing"
+
+    for split_name in ("train", "test", "val"):
+      print(f"\n\n-------- {split_name} --------")
+      
+      if not os.path.exists(paths.data_folder(f"{dataset_version}/{split_name}")):
+        os.makedirs(paths.data_folder(f"{dataset_version}/{split_name}"))
+
+      split_path = paths.data_folder(f"{split_name}_cath_w_seqs_share.csv")
+
+      # NOTE(milo): You can set a small `limit` here for debugging purposes.
+      data, warnings = preprocess(
+        split_path,
+        paths.data_folder(f"{dataset_version}/{split_name}"),
+        pdb_folder=paths.data_folder("pdb_share"),
+        limit=None
+      )
+
+      print("\nDONE!")
+      print("\nWARNINGS:")
+      print(warnings)
+
+  # This is the code that you want to run for evaluation:
+  else:
+    assert(args.csv is not None and args.output_folder is not None)
+    os.makedirs(args.output_folder, exist_ok=True)
     
-    if not os.path.exists(paths.data_folder(f"{dataset_version}/{split_name}")):
-      os.makedirs(paths.data_folder(f"{dataset_version}/{split_name}"))
-
-    split_path = paths.data_folder(f"{split_name}_cath_w_seqs_share.csv")
-
     # NOTE(milo): You can set a small `limit` here for debugging purposes.
     data, warnings = preprocess(
-      split_path,
-      paths.data_folder(f"{dataset_version}/{split_name}"),
+      args.csv,
+      args.output_folder,
       pdb_folder=paths.data_folder("pdb_share"),
       limit=None
     )

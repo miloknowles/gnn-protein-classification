@@ -115,10 +115,10 @@ class ProteinGraphDataset(data.Dataset):
     # Open up each file to see how many nodes it contains:
     for i, filename in enumerate(self.filenames):
       with open(filename, "r") as f:
-        m = ProteinBackboneWithEmbedding.model_validate(json.load(f))
-        self.node_counts[i] = len(m.seq)
-        self.label_counts[m.task_label] += 1
-        self.node_labels[i] = m.task_label
+        m = json.load(f)
+        self.node_counts[i] = len(m['seq'])
+        self.label_counts[m['task_label']] += 1
+        self.node_labels[i] = m['task_label']
 
     # Calculate weightsx for each label.
     self.class_weights = (1 / n_classes) * (len(self.filenames) / np.array(self.label_counts)) # (10)

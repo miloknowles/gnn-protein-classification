@@ -70,11 +70,15 @@ if __name__ == "__main__":
 
         # Add the embedding for this model to the file contents.
         for j in range(len(chunk_contents)):
-          chunk_contents[j][name] = sequence_representations[j].cpu().numpy().tolist()
-
-          # Write the new file.
+          # Write a copy of the original data file.
           with open(os.path.join(out_dataset_folder, split_name, f'{chunk_contents[j]["cath_id"]}.json'), "w") as f:
             json.dump(chunk_contents[j], f, indent=2)
+
+          # Save the embedding to a different file.
+          torch.save(
+            sequence_representations[j].cpu(),
+            os.path.join(out_dataset_folder, split_name, f'{chunk_contents[j]["cath_id"]}.pt')
+          )
 
       print(f"Finished batch {b+1}/{num_batches} in {time.time() - t0:.2f} sec")
 

@@ -17,6 +17,11 @@ from torch_geometric.nn import (
 
 
 class ClassifierGNNParams(BaseModel):
+  """Parameters for the model.
+  
+  This Pydantic class mainly helps us strip the relevant parameters out of a
+  larger configuration object.
+  """
   node_in_dim: tuple[int, int]
   node_h_dim: tuple[int, int]
   edge_in_dim: tuple[int, int]
@@ -25,6 +30,7 @@ class ClassifierGNNParams(BaseModel):
   num_gvp_layers: int = 3
   num_pool_layers: int = 3
   drop_rate: float = 0.1
+  pooling_op: str = "conv"
 
 
 class NaiveGlobalPooling(nn.Module):
@@ -83,12 +89,12 @@ class TransformerConvPoolingBlock(nn.Module):
         dropout=drop_rate,
         edge_dim=None,
         heads=n_conv_heads,
-      ) for _ in range(len(n_conv_layers))
+      ) for _ in range(n_conv_layers)
     )
 
     # Transform multi-head output back into a single head.
     self.transf_layers = nn.ModuleList(
-      nn.Linear(node_scalar_dim*n_conv_heads, node_scalar_dim) for _ in range(len(n_conv_layers))
+      nn.Linear(node_scalar_dim*n_conv_heads, node_scalar_dim) for _ in range(n_conv_layers)
     )
 
   def get_output_dim(self) -> int:

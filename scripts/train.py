@@ -213,6 +213,7 @@ def main():
     n_categories=10,
     num_gvp_layers=args.gnn_layers,
     drop_rate=0.1,
+    pooling_op=args.pooling_op,
     max_nodes=args.max_nodes,
     lr=args.lr,
     device=device,

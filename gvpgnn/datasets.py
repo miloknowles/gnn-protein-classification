@@ -170,7 +170,9 @@ class ProteinGraphDataset(data.Dataset):
       dihedrals = self._dihedrals(coords)                     
       orientations = self._orientations(X_ca)
       sidechains = self._sidechains(coords)
-      
+
+      # distance_matrix = torch.cdist(X_ca, X_ca, p=2, compute_mode="use_mm_for_euclid_dist")
+
       # The node scalar features can optionally include embeddings (by concatenating).
       if self.plm is not None:
         if self.precomputed_embeddings:
@@ -198,6 +200,7 @@ class ProteinGraphDataset(data.Dataset):
     data = torch_geometric.data.Data(
       x=X_ca,
       seq=seq,
+      # distance_matrix=distance_matrix,
       name=name,
       task_label=protein['task_label'],
       node_s=node_s,

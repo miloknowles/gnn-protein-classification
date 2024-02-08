@@ -44,13 +44,13 @@ class NaiveGlobalPooling(nn.Module):
 
   def get_output_dim(self) -> int:
     """Returns the output dimensionality of this block."""
-    return 2 * self.node_scalar_dim
+    return 3 * self.node_scalar_dim
 
   def forward(self, x, edge_index, graph_indices):
     return torch.concat([
       gmp(x, graph_indices),
       gap(x, graph_indices),
-      # gsp(x, graph_indices)
+      gsp(x, graph_indices)
     ], dim=-1)
 
 
@@ -84,7 +84,7 @@ class TransformerConvPoolingBlock(nn.Module):
 
   def get_output_dim(self) -> int:
     """Returns the output dimensionality of this block."""
-    return 2 * self.node_scalar_dim
+    return 3 * self.node_scalar_dim
 
   def forward(self, x, edge_index, graph_indices):
     for i in range(len(self.conv_layers)):
@@ -96,7 +96,7 @@ class TransformerConvPoolingBlock(nn.Module):
     return torch.concat([
       gmp(x, graph_indices),
       gap(x, graph_indices),
-      # gsp(x, graph_indices)
+      gsp(x, graph_indices)
     ], dim=-1)
 
 
@@ -108,38 +108,29 @@ class TopKPoolingBlock(nn.Module):
   """
   def __init__(self, node_scalar_dim: int, n_pool_layers: int = 3, n_conv_heads: int = 1, drop_rate: float = 0.1):
     super(TopKPoolingBlock, self).__init__()
-    self.conv_layers = nn.ModuleList([])
-    self.transf_layers = nn.ModuleList([])
-    self.pooling_layers = nn.ModuleList([])
-    self.bn_layers = nn.ModuleList([])
-    self.dropout_layers = nn.ModuleList(nn.Dropout(p=drop_rate) for _ in range(n_pool_layers))
+    self.conv_layers = nn.ModuleList(
+      TransformerConv(
+        node_scalar_dim,
+        node_scalar_dim,
+        concat=True,
+        beta=False,
+        dropout=drop_rate,
+        edge_dim=None,
+        heads=n_conv_heads,
+      ) for _ in range(n_pool_layers))
+    self.transf_layers = nn.ModuleList(
+      nn.Linear(node_scalar_dim*n_conv_heads, node_scalar_dim) for _ in range(n_pool_layers))
+    self.pooling_layers = nn.ModuleList(
+      TopKPooling(node_scalar_dim, ratio=0.5) for _ in range(n_pool_layers))
+    self.bn_layers = nn.ModuleList(
+      nn.BatchNorm1d(node_scalar_dim) for _ in range(n_pool_layers))
+    self.dropout_layers = nn.ModuleList(
+      nn.Dropout(p=drop_rate) for _ in range(n_pool_layers))
     self.node_scalar_dim = node_scalar_dim
-    
-    for _ in range(n_pool_layers):
-      self.conv_layers.append(
-        TransformerConv(
-          node_scalar_dim,
-          node_scalar_dim,
-          concat=True,
-          beta=False,
-          dropout=drop_rate,
-          edge_dim=None,
-          heads=n_conv_heads,
-        )
-      )
-      self.transf_layers.append(
-        nn.Linear(node_scalar_dim*n_conv_heads, node_scalar_dim)
-      )
-      self.bn_layers.append(
-        nn.BatchNorm1d(node_scalar_dim)
-      )
-      self.pooling_layers.append(
-        TopKPooling(node_scalar_dim, ratio=0.5) 
-      )
 
   def get_output_dim(self) -> int:
     """Returns the output dimensionality of this block."""
-    return len(self.pooling_layers) * 2 * self.node_scalar_dim
+    return len(self.pooling_layers) * 3 * self.node_scalar_dim
 
   def forward(self, x, edge_index, graph_indices):
     _edge_index = edge_index # modified
@@ -157,7 +148,7 @@ class TopKPoolingBlock(nn.Module):
       global_features.append(torch.cat([
         gmp(x, _graph_indices),
         gap(x, _graph_indices),
-        # gsp(x, _graph_indices)
+        gsp(x, _graph_indices)
       ], dim=-1))
 
     return torch.concat(global_features, dim=-1)
@@ -262,7 +253,7 @@ class ClassifierGNN(nn.Module):
 
     # Final dense block, which receives the pooled features as inputs, and outputs logits.
     self.dense = nn.Sequential(
-      nn.Linear(self.pooling_op.get_output_dim() + 2*ns, 4*ns),
+      nn.Linear(self.pooling_op.get_output_dim() + 3*ns, 4*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
       nn.Linear(4*ns, 2*ns),
@@ -303,7 +294,7 @@ class ClassifierGNN(nn.Module):
       x,
       gmp(f_Vs, graph_indices),
       gap(f_Vs, graph_indices),
-      # gsp(f_Vs, graph_indices)
+      gsp(f_Vs, graph_indices)
     ], dim=-1)
 
     return self.dense(x).squeeze(-1)

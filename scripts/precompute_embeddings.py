@@ -14,8 +14,8 @@ import gvpgnn.embeddings as plm
 if __name__ == "__main__":
   """Adds precomputed language model embeddings to a dataset."""
   device = "cuda" if torch.cuda.is_available() else "cpu"
-  # name = "esm2_t33_650M_UR50D"
-  name = "esm2_t6_8M_UR50D"
+  name = "esm2_t33_650M_UR50D"
+  # name = "esm2_t6_8M_UR50D"
   print(f"Using device '{device}'")
   print(f"Loading model '{name}'")
 

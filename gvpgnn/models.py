@@ -289,6 +289,8 @@ class ClassifierGNN(nn.Module):
     * `graph_indices`: the graph index that each node belongs to
     """
     f_Vs_in = self.W_features_in(h_V[0])
+    f_Vs_out = self.W_features_out(h_V[0])
+
     h_V = self.W_v((f_Vs_in, h_V[1]))
     h_E = self.W_e(h_E)
 
@@ -297,8 +299,6 @@ class ClassifierGNN(nn.Module):
 
     x = self.W_out(h_V)
     x = self.pooling_op(x, edge_index, graph_indices)
-
-    f_Vs_out = self.W_features_out(h_V[0])
 
     # Create a skip connection from the initial features to the final prediction.
     x = torch.concat([

@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from pydantic import BaseModel
 
-from .gvp_core import GVP, GVPConvLayer, LayerNorm
+from gvpgnn.gvp_core import GVP, GVPConvLayer, LayerNorm
 
 from torch_geometric.nn import (
   TransformerConv,
@@ -52,22 +52,6 @@ class NaiveGlobalPooling(nn.Module):
       gap(x, graph_indices),
       gsp(x, graph_indices)
     ], dim=-1)
-
-
-class NoPoolingBlock(nn.Module):
-  """
-  An identity module that provides the same interface as the other blocks.
-  """
-  def __init__(self, node_scalar_dim: int):
-    super(NoPoolingBlock, self).__init__()
-    self.node_scalar_dim = node_scalar_dim
-
-  def get_output_dim(self) -> int:
-    """Returns the output dimensionality of this block."""
-    return self.node_scalar_dim
-
-  def forward(self, x, edge_index, graph_indices):
-    return x
 
 
 class TransformerConvPoolingBlock(nn.Module):

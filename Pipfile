@@ -21,6 +21,7 @@ torch-scatter = "*"
 pydantic = "*"
 pytest = "*"
 pyarrow = "*"
+pywavefront = "*"
 
 [dev-packages]
 

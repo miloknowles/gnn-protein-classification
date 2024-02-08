@@ -1,4 +1,4 @@
-"""The command line interface for training."""
+"""The command line interface for training and testing."""
 
 import sys; sys.path.append('..')
 

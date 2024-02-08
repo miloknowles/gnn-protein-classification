@@ -208,7 +208,7 @@ class ProteinGraphDataset(data.Dataset):
       data = tf(data)
 
     return data
-                
+
   def _dihedrals(self, X, eps=1e-7):
     """https://github.com/jingraham/neurips19-graph-protein-design"""
     X = torch.reshape(X[:, :3], [3*X.shape[0], 3])

@@ -229,11 +229,17 @@ def main():
 
   if args.train:
     trainset = datasets.ProteinGraphDataset(
-      args.train_path, edge_algorithm=args.edge_algorithm, top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm)
+      args.train_path, edge_algorithm=args.edge_algorithm,
+      top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm
+    )
     valset = datasets.ProteinGraphDataset(
-      args.val_path, edge_algorithm=args.edge_algorithm, top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm)
+      args.val_path, edge_algorithm=args.edge_algorithm,
+      top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm
+    )
     testset = datasets.ProteinGraphDataset(
-      args.test_path, edge_algorithm=args.edge_algorithm, top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm)
+      args.test_path, edge_algorithm=args.edge_algorithm,
+      top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm
+    )
     train(model, train_params, trainset, valset, testset)
 
   else:

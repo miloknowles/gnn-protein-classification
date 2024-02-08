@@ -116,6 +116,36 @@ def train(
     pd.DataFrame(metrics).to_csv(os.path.join(args.models_dir, model_id, "metrics.csv"), index=False)
 
 
+def test(
+  model: nn.Module,
+  testset: torch.utils.data.Dataset,
+  weights_path: str,
+  device: str = "cpu"
+):
+  """Main coordinating function for training the model."""
+  test_loader = train_utils.dataloader_factory(testset, args)
+
+  lookup = dm.num_to_readable_architecture # label lookup for confusion matrix
+
+  if not os.path.exists(weights_path):
+    raise FileNotFoundError(f"Could not find pretrained weights at '{weights_path}'! Make sure you've copied these to the right location.")
+
+  print(f"Loading weights from {weights_path}")
+  model.load_state_dict(torch.load(weights_path, map_location=device))
+
+  model.eval()
+  with torch.no_grad():
+    loss, acc, confusion = loop(model, test_loader, optimizer=None)
+
+  print('*** Test set results:')
+  print(f'Loss: {loss:.4f} acc: {acc:.4f}')
+  print(f'Accuracy (top1): {100*acc:.4f}%')
+
+  print('----------------------------------------------------')
+  train_utils.print_confusion(confusion, lookup=lookup)
+  print('----------------------------------------------------')
+
+
 def loop(
   model: nn.Module,
   dataloader: torch_geometric.loader.DataLoader,
@@ -246,10 +276,19 @@ def main():
     train(model, train_params, trainset, valset, testset)
 
   elif args.test:
+    print("\n----- TESTING MODE -----\n")
     if args.test_path is None:
-      raise ValueError("You need to provide a --test-path to a folder with data!")
-    print("----- TESTING MODE -----")
+      raise ValueError("\
+        You need to provide a `--test-path` that points to the folder with test\
+        data in it! See the evaluation notebook for instructions.\
+      ")
+    if args.checkpoint is None:
+      raise ValueError("\
+        You need to provide a `--checkpoint` folder that points to a pretrained\
+        model checkpoint. See the evaluation notebook for instructions.\
+      ")
     testset = datasets.ProteinGraphDataset(args.test_path)
+    test(model, testset, weights_path=args.checkpoint)
 
 
 if __name__ == "__main__":

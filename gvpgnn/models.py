@@ -44,13 +44,13 @@ class NaiveGlobalPooling(nn.Module):
 
   def get_output_dim(self) -> int:
     """Returns the output dimensionality of this block."""
-    return 3 * self.node_scalar_dim
+    return 2 * self.node_scalar_dim
 
   def forward(self, x, edge_index, graph_indices):
     return torch.concat([
       gmp(x, graph_indices),
       gap(x, graph_indices),
-      gsp(x, graph_indices)
+      # gsp(x, graph_indices)
     ], dim=-1)
 
 
@@ -84,7 +84,7 @@ class TransformerConvPoolingBlock(nn.Module):
 
   def get_output_dim(self) -> int:
     """Returns the output dimensionality of this block."""
-    return 3 * self.node_scalar_dim
+    return 2 * self.node_scalar_dim
 
   def forward(self, x, edge_index, graph_indices):
     for i in range(len(self.conv_layers)):
@@ -96,7 +96,7 @@ class TransformerConvPoolingBlock(nn.Module):
     return torch.concat([
       gmp(x, graph_indices),
       gap(x, graph_indices),
-      gsp(x, graph_indices)
+      # gsp(x, graph_indices)
     ], dim=-1)
 
 
@@ -112,6 +112,7 @@ class TopKPoolingBlock(nn.Module):
     self.transf_layers = nn.ModuleList([])
     self.pooling_layers = nn.ModuleList([])
     self.bn_layers = nn.ModuleList([])
+    self.dropout_layers = nn.ModuleList(nn.Dropout(p=drop_rate) for _ in range(n_pool_layers))
     self.node_scalar_dim = node_scalar_dim
     
     for _ in range(n_pool_layers):
@@ -138,7 +139,7 @@ class TopKPoolingBlock(nn.Module):
 
   def get_output_dim(self) -> int:
     """Returns the output dimensionality of this block."""
-    return len(self.pooling_layers) * 3 * self.node_scalar_dim
+    return len(self.pooling_layers) * 2 * self.node_scalar_dim
 
   def forward(self, x, edge_index, graph_indices):
     _edge_index = edge_index # modified
@@ -150,12 +151,13 @@ class TopKPoolingBlock(nn.Module):
       x = self.conv_layers[i](x, _edge_index)
       x = torch.relu(self.transf_layers[i](x))
       x = self.bn_layers[i](x)
+      x = self.dropout_layers[i](x)
       x, _edge_index, _, _graph_indices, _, _ = \
         self.pooling_layers[i](x, _edge_index, None, _graph_indices)
       global_features.append(torch.cat([
         gmp(x, _graph_indices),
         gap(x, _graph_indices),
-        gsp(x, _graph_indices)
+        # gsp(x, _graph_indices)
       ], dim=-1))
 
     return torch.concat(global_features, dim=-1)
@@ -249,7 +251,7 @@ class ClassifierGNN(nn.Module):
       self.pooling_op = NaiveGlobalPooling(node_h_dim[0])
     elif pooling_op == "conv":
       self.pooling_op = TransformerConvPoolingBlock(
-          node_h_dim[0], n_conv_layers=n_pool_layers, n_conv_heads=n_conv_heads, drop_rate=drop_rate
+        node_h_dim[0], n_conv_layers=n_pool_layers, n_conv_heads=n_conv_heads, drop_rate=drop_rate
       )
     elif pooling_op == "topk":
       self.pooling_op = TopKPoolingBlock(
@@ -260,13 +262,13 @@ class ClassifierGNN(nn.Module):
 
     # Final dense block, which receives the pooled features as inputs, and outputs logits.
     self.dense = nn.Sequential(
-      nn.Linear(self.pooling_op.get_output_dim() + 3*ns, 2*ns),
+      nn.Linear(self.pooling_op.get_output_dim() + 2*ns, 4*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(2*ns, ns),
+      nn.Linear(4*ns, 2*ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(ns, n_categories)
+      nn.Linear(2*ns, n_categories)
     )
 
   def forward(
@@ -301,7 +303,7 @@ class ClassifierGNN(nn.Module):
       x,
       gmp(f_Vs, graph_indices),
       gap(f_Vs, graph_indices),
-      gsp(f_Vs, graph_indices)
+      # gsp(f_Vs, graph_indices)
     ], dim=-1)
 
     return self.dense(x).squeeze(-1)

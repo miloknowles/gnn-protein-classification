@@ -73,6 +73,7 @@ class ProteinGraphDataset(data.Dataset):
     num_rbf: int = 16,
     edge_algorithm: str = "knn_graph", # or radius_graph
     r_ball_radius: float = 8, # angstroms
+    virtual_node: bool = True,
     plm: Optional[str] = "esm2_t6_8M_UR50D",
     device: str = "cpu"
   ):
@@ -84,6 +85,7 @@ class ProteinGraphDataset(data.Dataset):
     self.edge_algorithm = edge_algorithm
     self.r_ball_radius = r_ball_radius
     self.num_positional_embeddings = num_positional_embeddings
+    self.virtual_node = virtual_node
     self.plm = plm
     self.device = device
 
@@ -151,14 +153,14 @@ class ProteinGraphDataset(data.Dataset):
       mask = torch.isfinite(coords.sum(dim=(1,2)))
       coords[~mask] = np.inf
       
-      # NOTE(milo): Find the k-nearest neighbors based on the position of C-alpha.
+      # NOTE(milo): Find neighbors based on the position of C-alpha.
       X_ca = coords[:, 1]
 
       if self.edge_algorithm == "knn_graph":
         edge_index = torch_cluster.knn_graph(X_ca, k=self.top_k)
       elif self.edge_algorithm == "radius_graph":
         edge_index = torch_cluster.radius_graph(X_ca, r=self.r_ball_radius)
-      
+
       pos_embeddings = self._positional_embeddings(edge_index)
       E_vectors = X_ca[edge_index[0]] - X_ca[edge_index[1]]
       rbf = _rbf(E_vectors.norm(dim=-1), D_count=self.num_rbf, device=self.device)
@@ -199,6 +201,11 @@ class ProteinGraphDataset(data.Dataset):
       edge_index=edge_index,
       mask=mask
     )
+
+    # Optionally add a virtual node that is receives/sends messages to all other nodes.
+    if self.virtual_node:
+      tf = torch_geometric.transforms.VirtualNode()
+      data = tf(data)
 
     return data
                 

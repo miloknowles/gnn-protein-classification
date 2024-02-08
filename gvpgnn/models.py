@@ -205,7 +205,16 @@ class ClassifierGNN(nn.Module):
     # First, embed the (potential high-dimensional) scalar features for each node
     # to a lower dimension. Since the features come from a static, pre-trained network,
     # this gives the model a chance to modify them before message passing.
-    self.W_features = nn.Sequential(
+    self.W_features_in = nn.Sequential(
+      nn.Linear(node_in_dim[0], ns),
+      nn.ReLU(inplace=True),
+      nn.Dropout(p=drop_rate),
+      nn.Linear(ns, ns),
+      nn.ReLU(inplace=True),
+      nn.Dropout(p=drop_rate),
+    )
+
+    self.W_features_out = nn.Sequential(
       nn.Linear(node_in_dim[0], ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
@@ -279,8 +288,8 @@ class ClassifierGNN(nn.Module):
     * `h_E`: tuple (s, V) of edge embeddings
     * `graph_indices`: the graph index that each node belongs to
     """
-    f_Vs = self.W_features(h_V[0])
-    h_V = self.W_v((f_Vs, h_V[1]))
+    f_Vs_in = self.W_features_in(h_V[0])
+    h_V = self.W_v((f_Vs_in, h_V[1]))
     h_E = self.W_e(h_E)
 
     for layer in self.gvp_conv_layers:
@@ -289,12 +298,14 @@ class ClassifierGNN(nn.Module):
     x = self.W_out(h_V)
     x = self.pooling_op(x, edge_index, graph_indices)
 
+    # f_Vs_out = self.W_features_out(h_V[0])
+
     # Create a skip connection from the initial features to the final prediction.
     x = torch.concat([
       x,
-      gmp(f_Vs, graph_indices),
-      gap(f_Vs, graph_indices),
-      gsp(f_Vs, graph_indices)
+      gmp(f_Vs_in, graph_indices),
+      gap(f_Vs_in, graph_indices),
+      gsp(f_Vs_in, graph_indices)
     ], dim=-1)
 
     return self.dense(x).squeeze(-1)

@@ -206,23 +206,21 @@ class ClassifierGNN(nn.Module):
     # to a lower dimension. Since the features come from a static, pre-trained network,
     # this gives the model a chance to modify them before message passing.
     self.W_features_in = nn.Sequential(
-      nn.Dropout(p=drop_rate),
       nn.Linear(node_in_dim[0], ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(ns, ns),
-      nn.ReLU(inplace=True),
-      nn.Dropout(p=drop_rate),
+      # nn.Linear(ns, ns),
+      # nn.ReLU(inplace=True),
+      # nn.Dropout(p=drop_rate),
     )
 
     self.W_features_out = nn.Sequential(
-      nn.Dropout(p=drop_rate),
       nn.Linear(node_in_dim[0], ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(ns, ns),
-      nn.ReLU(inplace=True),
-      nn.Dropout(p=drop_rate),
+      # nn.Linear(ns, ns),
+      # nn.ReLU(inplace=True),
+      # nn.Dropout(p=drop_rate),
     )
 
     # Map the NODE embeddings to their hidden dimension.

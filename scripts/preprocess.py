@@ -71,9 +71,9 @@ def preprocess(
 
   models = {}
   alphabets = {}
-  # for name in plm.esm2_model_dictionary:
+  for name in plm.esm2_model_dictionary:
   # NOTE(milo): Just pre-process one embedding for now.
-  for name in ["esm2_t33_650M_UR50D"]:
+  # for name in ["esm2_t33_650M_UR50D"]:
     models[name], alphabets[name] = plm.esm2_model_dictionary[name]()
     models[name] = models[name].to(device)
     print(f"Loaded pre-trained protein language model '{name}'")

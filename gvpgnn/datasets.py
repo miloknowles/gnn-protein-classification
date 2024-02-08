@@ -175,7 +175,9 @@ class ProteinGraphDataset(data.Dataset):
       if self.plm is not None:
         if self.precomputed_embeddings:
           if self.plm not in protein:
-            raise NotImplementedError(f"The precomputed embeddings from '{self.plm}' were not found in the dataset. Did you precompute?")
+            raise NotImplementedError(
+              f"The precomputed embeddings from '{self.plm}' were not found in the dataset. Did you precompute?"
+            )
           node_embedding = torch.Tensor(protein[self.plm])
         else:
           node_embedding = embeddings.extract_embedding_single(

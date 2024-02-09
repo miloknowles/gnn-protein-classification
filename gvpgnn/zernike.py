@@ -4,9 +4,30 @@ import numpy as np
 from scipy.special import (factorial, comb as nchoosek)
 import time
 import numba
+import math
+# from math import factorial
 
 import logging
 LOG = logging.getLogger(__name__)
+
+
+LOOKUP_TABLE = np.array([
+  1, 1, 2, 6, 24, 120, 720, 5040, 40320,
+  362880, 3628800, 39916800, 479001600,
+  6227020800, 87178291200, 1307674368000,
+  20922789888000, 355687428096000, 6402373705728000,
+  121645100408832000, 2432902008176640000
+], dtype='int64')
+
+
+@numba.njit
+def fast_factorial(n):
+  if n > 20:
+    result = 1
+    for i in range(1, n + 1):
+      result *= i
+    return result
+  return LOOKUP_TABLE[n]
 
 
 def nested_loop(stack, args):
@@ -35,7 +56,7 @@ def autocat(arrs, **dargs):
   return np.concatenate(arrs, axis=axis)
 
 
-IMAG_CONST = np.imag(1j) # scipy.sqrt(-1)
+IMAG_CONST = np.imag(1j)
 PI_CONST = np.pi
 NAN_CONST = np.NaN
 
@@ -43,25 +64,30 @@ NAN_CONST = np.NaN
 def geometric_moments_exact(points_array, faces_array, N):
   n_facets, n_vertices = faces_array.shape[:2]
   assert n_vertices == 3
-  moments_array = np.zeros([N + 1, N + 1, N + 1])
+  moments_array = np.zeros((N + 1, N + 1, N + 1))
   monomial_array = monomial_precalc(points_array, N)
   for face in faces_array:
     vertex_list = [points_array[_i, ...] for _i in face]
     Cf_list = [monomial_array[_i, ...] for _i in face]
     Vf = facet_volume(vertex_list)
-    t0 = time.time()
-    moments_array += Vf * term_Sijk(Cf_list, N)
+    moments_array += Vf * term_Sijk(Cf_list, N) # SLOW
   return factorial_scalar(N) * moments_array
 
 
+# @numba.njit
 def factorial_scalar(N):
   i, j, k = np.mgrid[0:N + 1, 0:N + 1, 0:N + 1]
-  return factorial(i) * factorial(j) * factorial(k) / (factorial(i + j + k + 2) * (i + j + k + 3))
+  fi = factorial(i)
+  fj = factorial(j)
+  fk = factorial(k)
+  fijk = factorial(i + j + k + 2)
+  return fi * fj * fk / (fijk * (i + j + k + 3))
 
 
+@numba.njit
 def monomial_precalc(points_array, N):
   n_points = points_array.shape[0]
-  monomial_array = np.zeros([n_points, N + 1, N + 1, N + 1])
+  monomial_array = np.zeros((n_points, N + 1, N + 1, N + 1))
   tri_array = trinomial_precalc(N)
   for point_indx, point in enumerate(points_array):
     monomial_array[point_indx, ...] = mon_comb(
@@ -69,22 +95,23 @@ def monomial_precalc(points_array, N):
   return monomial_array
 
 
+@numba.njit
 def mon_comb(vertex, tri_array, N, out=None):
   x, y, z = vertex
-  c = np.zeros([N + 1, N + 1, N + 1])
-  for i, j, k in nest(lambda: range(N + 1),
-            lambda _i: range(N - _i + 1),
-            lambda _i, _j: range(N - _i - _j + 1),
-            ):
-    c[i, j, k] = tri_array[i, j, k] * \
-      np.power(x, i) * np.power(y, j) * np.power(z, k)
+  c = np.zeros((N + 1, N + 1, N + 1))
+  for i in range(N + 1):
+    for j in range(N - i + 1):
+      for k in range(N - i - i + 1):
+        c[i, j, k] = tri_array[i, j, k] * \
+        np.power(x, i) * np.power(y, j) * np.power(z, k)
   return c
 
 
-@numba.njit
+@numba.njit(parallel=True)
 def term_Sijk(Cf_list, N):
   S = np.zeros((N + 1, N + 1, N + 1))
   C0, C1, C2 = Cf_list
+
   Dabc = term_Dabc(C1, C2, N)
 
   for i in range(N + 1):
@@ -97,18 +124,23 @@ def term_Sijk(Cf_list, N):
   return S
 
 
-def trinomial_precalc(N):
-  tri_array = np.zeros([N + 1, N + 1, N + 1])
-  for i, j, k in nest(lambda: range(N + 1),
-            lambda _i: range(N - _i + 1),
-            lambda _i, _j: range(N - _i - _j + 1)
-            ):
-    tri_array[i, j, k] = trinomial(i, j, k)
-  return tri_array
-
-
+@numba.njit
 def trinomial(i, j, k):
-  return factorial(i + j + k) / (factorial(i) * factorial(j) * factorial(k))
+  fijk = fast_factorial(i + j + k)
+  fi = fast_factorial(i)
+  fj = fast_factorial(j)
+  fk = fast_factorial(k)
+  return fijk / (fi * fj * fk)
+
+
+@numba.njit
+def trinomial_precalc(N):
+  tri_array = np.zeros((N + 1, N + 1, N + 1))
+  for i in range(N + 1):
+    for j in range(N - i + 1):
+      for k in range(N - i - j + 1):
+        tri_array[i, j, k] = trinomial(i, j, k)
+  return tri_array
 
 
 def facet_volume(vertex_list):

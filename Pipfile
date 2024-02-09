@@ -23,6 +23,8 @@ pytest = "*"
 pyarrow = "*"
 pywavefront = "*"
 numba = "*"
+meshlib = "*"
+graphein = "*"
 
 [dev-packages]
 

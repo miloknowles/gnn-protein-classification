@@ -162,6 +162,8 @@ class ProteinGraphDataset(data.Dataset):
         edge_index = torch_cluster.knn_graph(X_ca, k=self.top_k)
       elif self.edge_algorithm == "radius_graph":
         edge_index = torch_cluster.radius_graph(X_ca, r=self.r_ball_radius)
+      else:
+        raise NotImplementedError()
 
       pos_embeddings = self._positional_embeddings(edge_index)
       E_vectors = X_ca[edge_index[0]] - X_ca[edge_index[1]]

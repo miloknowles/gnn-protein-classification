@@ -38,9 +38,13 @@ if __name__ == "__main__":
   > pymol -cq ../data/meshing.pml
 
   This will output `.obj` files for each protein found in the input folder.
+
+  Notes
+  -----
+  https://pymol.org/pymol-command-ref.html#reinitialize
   """
   input_folder = paths.data_folder("pdb_share")
   output_folder = paths.data_folder("obj")
 
-  print("Creating a script to run with 'pymol'")
+  print("Creating a script that you can pass to 'pymol'")
   write_pymol_script(input_folder, output_folder)

@@ -12,4 +12,4 @@ python train.py --test \
   --n-pool-layers 3 \
   --n-conv-heads 3 \
   --plm esm2_t33_650M_UR50D \
-  --checkpoint ../models/best_model/checkpoint_1.pt
+  --checkpoint ../models/best_model_650M/checkpoint_1.pt

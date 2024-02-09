@@ -241,18 +241,18 @@ class ClassifierGNN(nn.Module):
       nn.Linear(node_in_dim[0], ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(ns, ns),
-      nn.ReLU(inplace=True),
-      nn.Dropout(p=drop_rate),
+      # nn.Linear(ns, ns),
+      # nn.ReLU(inplace=True),
+      # nn.Dropout(p=drop_rate),
     )
 
     self.W_features_out = nn.Sequential(
       nn.Linear(node_in_dim[0], ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      nn.Linear(ns, ns),
-      nn.ReLU(inplace=True),
-      nn.Dropout(p=drop_rate),
+      # nn.Linear(ns, ns),
+      # nn.ReLU(inplace=True),
+      # nn.Dropout(p=drop_rate),
     )
 
     # Map the NODE embeddings to their hidden dimension.

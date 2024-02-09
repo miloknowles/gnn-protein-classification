@@ -287,7 +287,8 @@ def main():
         You need to provide a `--checkpoint` folder that points to a pretrained\
         model checkpoint. See the evaluation notebook for instructions.\
       ")
-    testset = datasets.ProteinGraphDataset(args.test_path)
+    testset = datasets.ProteinGraphDataset(args.test_path, edge_algorithm=args.edge_algorithm,
+      top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm)
     test(model, testset, weights_path=args.checkpoint)
 
 

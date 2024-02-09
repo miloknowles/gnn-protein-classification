@@ -9,7 +9,107 @@ import torch.nn.functional as F
 import torch_geometric
 import torch_cluster
 import gvpgnn.embeddings as embeddings
+import gvpgnn.voxels as voxels
 
+
+class ProteinVoxelDataset(data.Dataset):
+  """
+  A dataset for voxelizing proteins.
+  """
+  def __init__(
+    self,
+    json_folder: str,
+    plm: Optional[str] = None,
+    device: str = "cpu",
+    voxel_grid_dim: int = 512,
+  ):
+    super(ProteinVoxelDataset, self).__init__()
+
+    # This defines the ordering of examples in the dataset.
+    self.json_folder = json_folder
+    self.filenames = glob.glob(f"{self.json_folder}/*.json")
+    self.voxel_grid_dim = voxel_grid_dim
+    self.device = device
+    self.plm = plm
+
+    if len(self.filenames) == 0:
+      raise FileNotFoundError("Couldn't find any files in the dataset folder you passed. Does it exist and have JSON files in it?")
+
+    # Count up the number of nodes in each graph (used by the sampler).
+    self.node_counts = [0 for _ in range(len(self.filenames))]
+
+    # Determine the frequence of labels in the dataset (used by the sampler).
+    n_classes = 10
+    self.label_counts = [0 for _ in range(n_classes)]
+    self.node_labels = [0 for _ in range(len(self.filenames))]
+
+    # Open up each file to see how many nodes it contains:
+    for i, filename in enumerate(self.filenames):
+      with open(filename, "r") as f:
+        m = json.load(f)
+        self.node_counts[i] = len(m['seq'])
+        self.label_counts[m['task_label']] += 1
+        self.node_labels[i] = m['task_label']
+
+    # Calculate weights for each label.
+    self.class_weights = (1 / n_classes) * (len(self.filenames) / np.array(self.label_counts)) # (10)
+    # Calculate weights for each example in the dataset (does not need to sum to 1).
+    self.sampler_weights = [self.class_weights[self.node_labels[i]] for i in range(len(self.node_labels))]
+
+    self.letter_to_num = {
+      'C': 4, 'D': 3, 'S': 15, 'Q': 5, 'K': 11, 'I': 9,
+      'P': 14, 'T': 16, 'F': 13, 'A': 0, 'G': 7, 'H': 8,
+      'E': 6, 'L': 10, 'R': 1, 'W': 17, 'V': 19, 
+      'N': 2, 'Y': 18, 'M': 12, '_': -1, 
+    }
+    self.num_to_letter = {v: k for k, v in self.letter_to_num.items()}
+
+  def __len__(self) -> int:
+    return len(self.filenames)
+  
+  def __getitem__(self, i) -> dict:
+    """Load the filename with index `i` and featurize it."""
+    with open(self.filenames[i], "r") as f:
+      data = json.load(f)
+      return self._featurize(data, i)
+
+  def _featurize(self, data: dict, i: int) -> dict:
+    name = data['name']
+    with torch.no_grad():
+      coords = torch.as_tensor(
+        data['coords'], device=self.device, dtype=torch.float32
+      )
+      seq = torch.as_tensor(
+        [self.letter_to_num[a] for a in data['seq']], device=self.device, dtype=torch.long
+      )
+
+      mask = torch.isfinite(coords.sum(dim=(1,2)))
+      coords[~mask] = np.inf
+      
+      # NOTE(milo): Find neighbors based on the position of C-alpha.
+      O_N = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 0]), G=self.voxel_grid_dim).unsqueeze(-1)
+      O_Ca = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 1]), G=self.voxel_grid_dim).unsqueeze(-1)
+      O_C = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 2]), G=self.voxel_grid_dim).unsqueeze(-1)
+      O_O = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 3]), G=self.voxel_grid_dim).unsqueeze(-1)
+      O = torch.concat([O_N, O_Ca, O_C, O_O], dim=-1)
+
+      # The node scalar features can optionally include embeddings (by concatenating).
+      if self.plm is not None:
+        embedding = torch.load(self.filenames[i].replace(".json", ".pt"))
+      else:
+        embedding = None
+
+    return dict(
+      # seq=seq,
+      name=name,
+      task_label=data['task_label'],
+      coords=coords,
+      mask=mask,
+      occupancy_grid=O,
+      embedding=embedding,
+    )
+
+#===============================================================================
 
 def _normalize(tensor, dim=-1):
   '''
@@ -171,8 +271,6 @@ class ProteinGraphDataset(data.Dataset):
       dihedrals = self._dihedrals(coords)                     
       orientations = self._orientations(X_ca)
       sidechains = self._sidechains(coords)
-
-      # distance_matrix = torch.cdist(X_ca, X_ca, p=2, compute_mode="use_mm_for_euclid_dist")
 
       # The node scalar features can optionally include embeddings (by concatenating).
       if self.plm is not None:

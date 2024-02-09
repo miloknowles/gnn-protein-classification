@@ -211,8 +211,11 @@ class ClassifierGNN(nn.Module):
   `node_in_dim`: Edge dimensions in input graph. Should be (32, 1) if using original features.
   `edge_h_dim`: Edge dimensions to embed to before use in GVP-GNN layers. Authors use (32, 1).
   `n_categories`: The number of output categories for classification
-  `n_gvp_layers`: The number of internal GVP-GNN layers.
+  `n_gvp_layers`: The number of internal GVP-GNN message passing layers.
+  `n_pool_layers`: The number of global pooling layers
   `drop_rate`: The rate to use in all dropout layers.
+  `n_conv_heads`: The number of heads to use in transformer layers (if applicable)
+  `pooling_op`: The global pooling strategy to use
   """
   def __init__(
     self,

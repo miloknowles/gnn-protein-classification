@@ -73,7 +73,7 @@ class ProteinGraphDataset(data.Dataset):
     edge_algorithm: str = "knn_graph", # or radius_graph
     r_ball_radius: float = 8, # angstroms
     virtual_node: bool = True,
-    plm: Optional[str] = "esm2_t6_8M_UR50D",
+    plm: Optional[str] = None,
     device: str = "cpu",
     precomputed_embeddings: bool = True
   ):

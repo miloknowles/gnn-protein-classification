@@ -9,7 +9,7 @@ py3dmol = "*"
 pandas = "*"
 numpy = "*"
 jupyter = "*"
-torch = "*"
+torch = "==2.2.0"
 torchvision = "*"
 fair-esm = "*"
 matplotlib = "*"
@@ -24,7 +24,6 @@ pyarrow = "*"
 pywavefront = "*"
 numba = "*"
 meshlib = "*"
-graphein = "*"
 
 [dev-packages]
 

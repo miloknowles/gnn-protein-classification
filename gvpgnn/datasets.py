@@ -9,7 +9,6 @@ import torch.nn.functional as F
 import torch_geometric
 import torch_cluster
 import gvpgnn.embeddings as embeddings
-from gvpgnn.data_models import ProteinBackboneWithEmbedding
 
 
 def _normalize(tensor, dim=-1):

@@ -156,7 +156,10 @@ class TopKPoolingBlock(nn.Module):
 
 
 class DistanceMatrixCNN(nn.Module):
-  """Applies convolutional layers to a pairwise distance matrix."""
+  """Applies convolutional layers to a pairwise distance matrix.
+  
+  NOTE(milo): This is currently not used in my codebase.
+  """
   def __init__(self, output_dim: int = 32):
     super().__init__()
     self.conv1 = nn.Conv2d(3, 6, 5)
@@ -235,18 +238,18 @@ class ClassifierGNN(nn.Module):
       nn.Linear(node_in_dim[0], ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      # nn.Linear(ns, ns),
-      # nn.ReLU(inplace=True),
-      # nn.Dropout(p=drop_rate),
+      nn.Linear(ns, ns),
+      nn.ReLU(inplace=True),
+      nn.Dropout(p=drop_rate),
     )
 
     self.W_features_out = nn.Sequential(
       nn.Linear(node_in_dim[0], ns),
       nn.ReLU(inplace=True),
       nn.Dropout(p=drop_rate),
-      # nn.Linear(ns, ns),
-      # nn.ReLU(inplace=True),
-      # nn.Dropout(p=drop_rate),
+      nn.Linear(ns, ns),
+      nn.ReLU(inplace=True),
+      nn.Dropout(p=drop_rate),
     )
 
     # Map the NODE embeddings to their hidden dimension.

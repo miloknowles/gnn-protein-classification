@@ -236,6 +236,7 @@ def main():
     plm_embedding_dim=plm_embedding_dim,
     drop_rate=0.1,
     voxel_grid_dim=args.voxel_grid_dim,
+    random_rotation=args.random_rotation,
     lr=args.lr,
     device=device,
     model_id=args.model_id,
@@ -258,13 +259,16 @@ def main():
 
   if args.train:
     trainset = datasets.ProteinVoxelDataset(
-      args.train_path, plm=args.plm, device=device, voxel_grid_dim=args.voxel_grid_dim
+      args.train_path, plm=args.plm, device=device,
+      voxel_grid_dim=args.voxel_grid_dim, apply_random_rotation=args.random_rotation,
     )
     valset = datasets.ProteinVoxelDataset(
-      args.train_path, plm=args.plm, device=device, voxel_grid_dim=args.voxel_grid_dim
+      args.train_path, plm=args.plm, device=device,
+      voxel_grid_dim=args.voxel_grid_dim, apply_random_rotation=False,
     )
     testset = datasets.ProteinVoxelDataset(
-      args.train_path, plm=args.plm, device=device, voxel_grid_dim=args.voxel_grid_dim
+      args.train_path, plm=args.plm, device=device,
+      voxel_grid_dim=args.voxel_grid_dim, apply_random_rotation=False,
     )
     train(model, train_params, trainset, valset, testset)
 

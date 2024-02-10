@@ -40,6 +40,7 @@ parser.add_argument('--n-pool-layers', type=int, default=3, help="The number of 
 # For training the 3DCNN model:
 parser.add_argument('--batch-size', type=int, default=16, help="The batch size for training")
 parser.add_argument('--voxel-grid-dim', type=int, default=512, help="The size (edge length) of the voxel grid.")
+parser.add_argument('--random-rotation', action="store_true", default=False, help="Apply random rotations to the 3D point clouds")
 
 parser.add_argument('--train', action="store_true", help="Train a model from scratch or from a checkpoint.")
 parser.add_argument('--test', action="store_true", help="Test a trained model")

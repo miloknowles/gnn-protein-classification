@@ -11,6 +11,21 @@ import torch_cluster
 import gvpgnn.embeddings as embeddings
 import gvpgnn.voxels as voxels
 
+from scipy.spatial.transform import Rotation
+
+
+class RandomRotation3d(object):
+  """Randomly apply a 3D rotation to a set of points.
+
+  We sample a random rotation matrix and apply it to all of the points..
+  """
+  def __init__(self):
+    pass
+
+  def __call__(self, points: torch.Tensor):
+    R = Rotation.random().as_matrix()
+    return torch.matmul(points, R)
+
 
 class ProteinVoxelDataset(data.Dataset):
   """
@@ -22,6 +37,7 @@ class ProteinVoxelDataset(data.Dataset):
     plm: Optional[str] = None,
     device: str = "cpu",
     voxel_grid_dim: int = 512,
+    apply_random_rotation: bool = False,
   ):
     super(ProteinVoxelDataset, self).__init__()
 
@@ -31,6 +47,7 @@ class ProteinVoxelDataset(data.Dataset):
     self.voxel_grid_dim = voxel_grid_dim
     self.device = device
     self.plm = plm
+    self.transform = RandomRotation3d() if apply_random_rotation else None
 
     if len(self.filenames) == 0:
       raise FileNotFoundError("Couldn't find any files in the dataset folder you passed. Does it exist and have JSON files in it?")
@@ -77,15 +94,15 @@ class ProteinVoxelDataset(data.Dataset):
     name = data['name']
     with torch.no_grad():
       coords = torch.as_tensor(
-        data['coords'], device=self.device, dtype=torch.float32
-      )
-      seq = torch.as_tensor(
-        [self.letter_to_num[a] for a in data['seq']], device=self.device, dtype=torch.long
+        data['coords'],
+        device=self.device,
+        dtype=torch.float32
       )
 
-      mask = torch.isfinite(coords.sum(dim=(1,2)))
-      coords[~mask] = np.inf
-      
+      # Optionally apply a random rotation to the data.
+      if self.transform is not None:
+        coords = self.transform(coords)
+
       # NOTE(milo): Find neighbors based on the position of C-alpha.
       O_N = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 0]), G=self.voxel_grid_dim).unsqueeze(-1)
       O_Ca = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 1]), G=self.voxel_grid_dim).unsqueeze(-1)
@@ -100,11 +117,9 @@ class ProteinVoxelDataset(data.Dataset):
         embedding = None
 
     return dict(
-      # seq=seq,
       name=name,
       task_label=data['task_label'],
       coords=coords,
-      mask=mask,
       occupancy_grid=O,
       embedding=embedding,
     )

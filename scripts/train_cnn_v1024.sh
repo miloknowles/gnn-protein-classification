@@ -7,3 +7,4 @@ python train.py --train \
   --lr 1e-4 \
   --voxel-grid-dim 1024 \
   --batch-size 16 \
+  --random-rotation \

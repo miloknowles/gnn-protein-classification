@@ -19,11 +19,11 @@ class RandomRotation3d(object):
 
   We sample a random rotation matrix and apply it to all of the points..
   """
-  def __init__(self):
-    pass
+  def __init__(self, device):
+    self.device = device
 
   def __call__(self, points: torch.Tensor):
-    R = torch.Tensor(Rotation.random().as_matrix())
+    R = torch.Tensor(Rotation.random().as_matrix()).to(self.device)
     return torch.matmul(points, R)
 
 
@@ -47,7 +47,7 @@ class ProteinVoxelDataset(data.Dataset):
     self.voxel_grid_dim = voxel_grid_dim
     self.device = device
     self.plm = plm
-    self.transform = RandomRotation3d() if apply_random_rotation else None
+    self.transform = RandomRotation3d(device=device) if apply_random_rotation else None
 
     if len(self.filenames) == 0:
       raise FileNotFoundError("Couldn't find any files in the dataset folder you passed. Does it exist and have JSON files in it?")

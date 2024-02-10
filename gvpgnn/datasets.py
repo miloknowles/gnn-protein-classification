@@ -104,11 +104,11 @@ class ProteinVoxelDataset(data.Dataset):
         coords = self.transform(coords)
 
       # NOTE(milo): Find neighbors based on the position of C-alpha.
-      O_N = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 0]), G=self.voxel_grid_dim).unsqueeze(-1)
-      O_Ca = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 1]), G=self.voxel_grid_dim).unsqueeze(-1)
-      O_C = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 2]), G=self.voxel_grid_dim).unsqueeze(-1)
-      O_O = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 3]), G=self.voxel_grid_dim).unsqueeze(-1)
-      O = torch.concat([O_N, O_Ca, O_C, O_O], dim=-1)
+      O_N = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 0]), G=self.voxel_grid_dim).unsqueeze(0)
+      O_Ca = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 1]), G=self.voxel_grid_dim).unsqueeze(0)
+      O_C = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 2]), G=self.voxel_grid_dim).unsqueeze(0)
+      O_O = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 3]), G=self.voxel_grid_dim).unsqueeze(0)
+      O = torch.concat([O_N, O_Ca, O_C, O_O], dim=0) # channel dim first
 
       # The node scalar features can optionally include embeddings (by concatenating).
       if self.plm is not None:
@@ -444,6 +444,60 @@ class BatchSampler(data.Sampler):
         n_nodes += self.node_counts[next_idx]
         batch.append(next_idx)
       self.batches.append(batch)
+
+  def __len__(self) -> int:
+    """Returns the number of batches.""" 
+    if not self.batches:
+      self._form_batches()
+    return len(self.batches)
+  
+  def __iter__(self) -> list[int]:
+    """Generator function for batches.
+    
+    Each batch is a list of indices in the dataset to sample.
+    """
+    if not self.batches:
+      self._form_batches()
+    for batch in self.batches:
+      yield batch
+
+
+class CNNBatchSampler(data.Sampler):
+  '''
+  From https://github.com/jingraham/neurips19-graph-protein-design.
+  
+  A `torch.utils.data.Sampler` which samples batches according to a
+  maximum number of graph nodes.
+  
+  :param node_counts: array of node counts in the dataset to sample from
+  :param max_nodes: the maximum number of nodes in any batch, including batches of a single element
+  :param shuffle: if `True`, batches in shuffled order
+  '''
+  def __init__(
+    self,
+    batch_size: int,
+    sampler_weights: np.ndarray,
+    shuffle: bool = True,
+  ):
+    self.batch_size = batch_size
+    self.shuffle = shuffle
+    self.sampler_weights = sampler_weights
+    self._form_batches()
+  
+  def _form_batches(self):
+    """Form batches with random sampling.
+    """
+    self.batches = []
+    idx = list(data.WeightedRandomSampler(self.sampler_weights, len(self.sampler_weights), replacement=True))
+
+    if self.shuffle:
+      random.shuffle(idx)
+
+    N = len(idx)
+    B = self.batch_size
+
+    for b in range(N // B - 1):
+      self.batches.append(idx[b*B : b*B + B])
 
   def __len__(self) -> int:
     """Returns the number of batches.""" 

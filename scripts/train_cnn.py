@@ -6,7 +6,7 @@ import tqdm, os, json
 import pandas as pd
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.utils.data import DataLoader
 import gvpgnn.datasets as datasets
 import gvpgnn.cnn as cnn
 import gvpgnn.data_models as dm
@@ -39,9 +39,7 @@ def make_dataloader(
 ) -> DataLoader:
   return DataLoader(
     dataset,
-    # batch_size=args.batch_size,
-    # shuffle=shuffle,
-    batch_sampler=WeightedRandomSampler(dataset.sampler_weights, args.batch_size)
+    batch_sampler=datasets.CNNBatchSampler(args.batch_size, dataset.sampler_weights, shuffle=shuffle)
   )
 
 
@@ -183,13 +181,14 @@ def loop(
     if optimizer:
       optimizer.zero_grad()
 
-    batch = batch.to(device)
+    O, task_labels = batch["occupancy_grid"], batch["task_label"]
+    # batch = batch.to(device)
 
     # Generate unnormalized predictions from the network on this batch.
     # NOTE(milo): Important to pass in the batch indices so that nodes are
     # associated with the correct graphs in the batch!
-    logits = model(batch)
-    loss_value = loss_fn(logits, batch.task_label)
+    logits = model(O.to(device))
+    loss_value = loss_fn(logits, task_labels)
 
     if optimizer:
       loss_value.backward()
@@ -197,10 +196,10 @@ def loop(
 
     # Weight the loss value by the size of this batch (we'll normalize later).
     total_loss += loss_value
-    total_count += batch.shape[0]
+    total_count += O.shape[0]
 
     pred = torch.argmax(logits, dim=-1).detach().cpu().numpy()
-    actual = batch.task_label.detach().cpu().numpy()
+    actual = task_labels.detach().cpu().numpy()
 
     total_correct += (pred == actual).sum()
   

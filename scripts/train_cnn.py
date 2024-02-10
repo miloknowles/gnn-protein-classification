@@ -9,12 +9,10 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 import gvpgnn.datasets as datasets
 import gvpgnn.cnn as cnn
-import gvpgnn.paths as paths
 import gvpgnn.data_models as dm
 import gvpgnn.embeddings as embeddings
 import gvpgnn.train_utils as train_utils
 import numpy as np
-import torch_geometric
 from sklearn.metrics import confusion_matrix
 from scripts.parser import parser
 
@@ -36,7 +34,8 @@ if device == "mps":
 
 
 def make_dataloader(
-  dataset: datasets.ProteinVoxelDataset, shuffle: bool = False, batch_size: int = 16
+  dataset: datasets.ProteinVoxelDataset,
+  shuffle: bool = False,
 ) -> DataLoader:
   return DataLoader(
     dataset,
@@ -55,9 +54,9 @@ def train(
 ):
   """Main coordinating function for training the model."""
   model_id = str(params['model_id'])
-  train_loader = make_dataloader(trainset, shuffle=True, batch_size=args.batch_size)
-  val_loader = make_dataloader(valset, shuffle=False, batch_size=args.batch_size)
-  test_loader = train_utils.dataloader_factory(testset, shuffle=False, batch_size=args.batch_size)
+  train_loader = make_dataloader(trainset, shuffle=True)
+  val_loader = make_dataloader(valset, shuffle=False)
+  test_loader = train_utils.dataloader_factory(testset, shuffle=False)
 
   optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -236,36 +235,36 @@ def main():
     plm=args.plm,
     plm_embedding_dim=plm_embedding_dim,
     drop_rate=0.1,
+    voxel_grid_dim=args.voxel_grid_dim,
     lr=args.lr,
     device=device,
     model_id=args.model_id,
+    batch_size=args.batch_size,
   )
 
   print("\nPARAMETERS:")
   for k, v in train_params.items():
     print(f"* {k} = {v}")
 
-  voxel_grid_dim = 512
-
   # Strip out only the parameters relevant to the model.
   model = cnn.CNN3DClassifier(
     in_dim=4,
     conv_out_dim=64,
     logits_out_dim=10,
-    box_size=voxel_grid_dim,
+    box_size=args.voxel_grid_dim,
     conv_hidden_dim=64,
     dense_hidden_dim=64
   ).to(device)
 
   if args.train:
     trainset = datasets.ProteinVoxelDataset(
-      args.train_path, plm=args.plm, device=device, voxel_grid_dim=voxel_grid_dim
+      args.train_path, plm=args.plm, device=device, voxel_grid_dim=args.voxel_grid_dim
     )
     valset = datasets.ProteinVoxelDataset(
-      args.train_path, plm=args.plm, device=device, voxel_grid_dim=voxel_grid_dim
+      args.train_path, plm=args.plm, device=device, voxel_grid_dim=args.voxel_grid_dim
     )
     testset = datasets.ProteinVoxelDataset(
-      args.train_path, plm=args.plm, device=device, voxel_grid_dim=voxel_grid_dim
+      args.train_path, plm=args.plm, device=device, voxel_grid_dim=args.voxel_grid_dim
     )
     train(model, train_params, trainset, valset, testset)
 

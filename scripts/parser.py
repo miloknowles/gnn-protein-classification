@@ -36,6 +36,9 @@ parser.add_argument('--pooling-op', choices=["naive", "conv", "topk"], default="
 parser.add_argument('--n-conv-heads', type=int, default=1, help="The number of heads in Transformer layers")
 parser.add_argument('--n-pool-layers', type=int, default=3, help="The number of pooling layers to apply")
 
+parser.add_argument('--batch-size', type=int, default=16, help="The batch size for training")
+parser.add_argument('--voxel-grid-dim', type=int, default=512, help="The size (edge length) of the voxel grid.")
+
 parser.add_argument('--train', action="store_true", help="Train a model from scratch or from a checkpoint.")
 parser.add_argument('--test', action="store_true", help="Test a trained model")
 

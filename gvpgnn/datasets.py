@@ -23,7 +23,7 @@ class RandomRotation3d(object):
     pass
 
   def __call__(self, points: torch.Tensor):
-    R = Rotation.random().as_matrix()
+    R = torch.Tensor(Rotation.random().as_matrix())
     return torch.matmul(points, R)
 
 
@@ -119,9 +119,9 @@ class ProteinVoxelDataset(data.Dataset):
     return dict(
       name=name,
       task_label=data['task_label'],
-      coords=coords,
+      # coords=coords,
       occupancy_grid=O,
-      embedding=embedding,
+      # embedding=embedding,
     )
 
 #===============================================================================

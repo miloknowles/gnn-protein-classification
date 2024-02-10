@@ -55,7 +55,7 @@ class CNN3D(nn.Module):
       nn.ReLU(inplace=True),
       nn.Dropout(dropout),
 
-      nn.Conv3d(hidden_dim * 16, out_dim, box_size / 4, 1, 0, bias=False),
+      nn.Conv3d(hidden_dim * 16, out_dim, int(box_size / 4), 1, 0, bias=False),
     )
 
   def forward(self, input):

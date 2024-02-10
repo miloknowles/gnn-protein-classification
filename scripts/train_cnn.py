@@ -39,9 +39,9 @@ def make_dataloader(
 ) -> DataLoader:
   return DataLoader(
     dataset,
-    batch_size=args.batch_size,
-    shuffle=shuffle,
-    batch_sampler=WeightedRandomSampler(dataset.sampler_weights)
+    # batch_size=args.batch_size,
+    # shuffle=shuffle,
+    batch_sampler=WeightedRandomSampler(dataset.sampler_weights, args.batch_size)
   )
 
 
@@ -56,7 +56,7 @@ def train(
   model_id = str(params['model_id'])
   train_loader = make_dataloader(trainset, shuffle=True)
   val_loader = make_dataloader(valset, shuffle=False)
-  test_loader = train_utils.dataloader_factory(testset, shuffle=False)
+  test_loader = make_dataloader(testset, shuffle=False)
 
   optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 

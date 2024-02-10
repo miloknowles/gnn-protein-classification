@@ -78,3 +78,14 @@ def get_voxel_indices(p: torch.Tensor, voxel_size: float, voxel_grid_dim: int) -
   scale_factor = 1 / voxel_size
   indices = (p * scale_factor).floor().long().clamp_max(max=voxel_grid_dim - 1)
   return indices
+
+
+def create_occupancy_grid(points: torch.Tensor, G: int = 100) -> torch.Tensor:
+  """Create a 3D occupancy grid from a collection of poins."""
+  indices = get_voxel_indices(points, voxel_size=1/G, voxel_grid_dim=G)
+  O = torch.zeros((G, G, G))
+
+  for idx in indices:
+    O[tuple(idx)] += 1
+
+  return O

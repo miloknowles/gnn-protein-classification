@@ -1,10 +1,5 @@
 import Bio.PDB.PDBParser
-from Bio.PDB.Polypeptide import protein_letters_3to1
-
-import numpy as np
 import torch
-
-import open3d as o3d
 
 
 def extract_point_clouds_N_Ca_C_O(pdb_filename: str, cath_id: str):
@@ -61,16 +56,25 @@ def center_and_scale_unit_box(points: torch.Tensor) -> torch.Tensor:
   return (centered * sf) + 0.5
 
 
-def create_occupancy_grid(points: torch.Tensor, G: int = 100) -> torch.Tensor:
-  """Create a 3D occupancy grid from a collection of poins."""
-  pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(points))
-  voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=(1/G))
-  voxels = voxel_grid.get_voxels()
-  indices = np.stack(list(vx.grid_index for vx in voxels))
+def get_voxel_indices(p: torch.Tensor, voxel_size: float, voxel_grid_dim: int) -> torch.Tensor:
+  """Determine the indices that each point should map to in a voxel grid.
+  
+  All of the points should have been centered and scaled already. None of the
+  coordinates should be less than zero.
+  """
+  assert(voxel_size > 1e-4) # nonnegative
+  scale_factor = 1 / voxel_size
+  indices = (p * scale_factor).floor().clamp_max(max=voxel_grid_dim - 1)
+  return indices
 
-  O = torch.zeros((G, G, G))
 
-  for idx in indices:
-    O[tuple(idx)] += 1
-
-  return O
+def get_voxel_indices(p: torch.Tensor, voxel_size: float, voxel_grid_dim: int) -> torch.Tensor:
+  """Determine the indices that each point should map to in a voxel grid.
+  
+  All of the points should have been centered and scaled already. None of the
+  coordinates should be less than zero.
+  """
+  assert(voxel_size > 1e-4) # nonnegative
+  scale_factor = 1 / voxel_size
+  indices = (p * scale_factor).floor().long().clamp_max(max=voxel_grid_dim - 1)
+  return indices

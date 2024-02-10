@@ -188,6 +188,7 @@ def loop(
     # NOTE(milo): Important to pass in the batch indices so that nodes are
     # associated with the correct graphs in the batch!
     logits = model(O.to(device))
+    task_labels = task_labels.to(device)
     loss_value = loss_fn(logits, task_labels)
 
     if optimizer:

@@ -111,10 +111,10 @@ class ProteinVoxelDataset(data.Dataset):
       O = torch.concat([O_N, O_Ca, O_C, O_O], dim=0) # channel dim first
 
       # The node scalar features can optionally include embeddings (by concatenating).
-      if self.plm is not None:
-        embedding = torch.load(self.filenames[i].replace(".json", ".pt"))
-      else:
-        embedding = None
+      # if self.plm is not None:
+      #   embedding = torch.load(self.filenames[i].replace(".json", ".pt"))
+      # else:
+      #   embedding = None
 
     return dict(
       name=name,

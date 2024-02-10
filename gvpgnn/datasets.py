@@ -108,7 +108,8 @@ class ProteinVoxelDataset(data.Dataset):
       O_Ca = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 1]), G=self.voxel_grid_dim).unsqueeze(0)
       O_C = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 2]), G=self.voxel_grid_dim).unsqueeze(0)
       O_O = voxels.create_occupancy_grid(voxels.center_and_scale_unit_box(coords[:, 3]), G=self.voxel_grid_dim).unsqueeze(0)
-      O = torch.concat([O_N, O_Ca, O_C, O_O], dim=0) # channel dim first
+      # O = torch.concat([O_N, O_Ca, O_C, O_O], dim=0) # channel dim first
+      O = 0.25 * (O_N + O_Ca + O_C + O_O)
 
       # The node scalar features can optionally include embeddings (by concatenating).
       # if self.plm is not None:

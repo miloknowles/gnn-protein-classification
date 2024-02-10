@@ -3,7 +3,7 @@ python train_cnn.py --train \
   --train-path ../data/cleaned_skip_missing/train \
   --val-path ../data/cleaned_skip_missing/val \
   --test-path ../data/cleaned_skip_missing/test \
-  --num-workers 4 \
+  --num-workers 2 \
   --lr 1e-4 \
   --voxel-grid-dim 64 \
   --batch-size 4 \

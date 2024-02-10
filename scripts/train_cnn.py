@@ -189,6 +189,7 @@ def loop(
     # associated with the correct graphs in the batch!
     logits = model(O.to(device))
     task_labels = task_labels.to(device)
+
     loss_value = loss_fn(logits, task_labels)
 
     if optimizer:
@@ -249,7 +250,7 @@ def main():
 
   # Strip out only the parameters relevant to the model.
   model = cnn.CNN3DClassifier(
-    in_dim=4,
+    in_dim=1,
     conv_out_dim=64,
     logits_out_dim=10,
     box_size=args.voxel_grid_dim,

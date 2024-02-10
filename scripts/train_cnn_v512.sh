@@ -3,8 +3,8 @@ python train_cnn.py --train \
   --train-path ../data/cleaned_skip_missing/train \
   --val-path ../data/cleaned_skip_missing/val \
   --test-path ../data/cleaned_skip_missing/test \
-  --num-workers 1 \
+  --num-workers 4 \
   --lr 1e-4 \
-  --voxel-grid-dim 64 \
-  --batch-size 2 \
+  --voxel-grid-dim 512 \
+  --batch-size 8 \
   --random-rotation \

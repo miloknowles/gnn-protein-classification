@@ -85,9 +85,10 @@ def run_train_val_test(name: str, in_dataset_folder: str, out_dataset_folder: st
 
 if __name__ == "__main__":
   """
-  Precompute language model embeddings across a dataset.
+  Precompute language model embeddings across a dataset, using batching to speed
+  up the process.
 
-  Note that you should have already run `preprocess.py` to pre-process the
+  Note that you should have already run `preprocess_dataset.py` to pre-process the
   dataset; this step comes after that.
 
   Usage

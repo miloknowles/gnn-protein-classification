@@ -9,7 +9,7 @@ import Bio.PDB.PDBParser
 from Bio.PDB.Polypeptide import protein_letters_3to1
 
 import gvpgnn.paths as paths
-import gvpgnn.data_models as dm
+import gvpgnn.models as dm
 
 
 def check_disjoint_dataset_splits():
@@ -158,7 +158,7 @@ if __name__ == "__main__":
   If you're just trying to evaluate a pre-trained model, you'll want to run a command like:
 
   ```
-  python preprocess.py --csv challenge_test_set.csv \
+  python preprocess_dataset.py --csv challenge_test_set.csv \
     --output-folder ../data/challenge_test_set \
     --pdb-folder ../data/pdb_share
   ```

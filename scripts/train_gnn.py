@@ -6,10 +6,10 @@ import tqdm, os, json
 import pandas as pd
 import torch
 import torch.nn as nn
-import gvpgnn.datasets as datasets
-import gvpgnn.models as models
+import gvpgnn.graph_dataset as graph_dataset
+import gvpgnn.gnn as gnn
 import gvpgnn.paths as paths
-import gvpgnn.data_models as dm
+import gvpgnn.models as dm
 import gvpgnn.embeddings as embeddings
 import gvpgnn.train_utils as train_utils
 import numpy as np
@@ -257,19 +257,19 @@ def main():
     print(f"* {k} = {v}")
 
   # Strip out only the parameters relevant to the model.
-  model_params = models.ClassifierGNNParams.model_validate(train_params).model_dump()
-  model = models.ClassifierGNN(**model_params).to(device)
+  model_params = gnn.ClassifierGNNParams.model_validate(train_params).model_dump()
+  model = gnn.ClassifierGNN(**model_params).to(device)
 
   if args.train:
-    trainset = datasets.ProteinGraphDataset(
+    trainset = graph_dataset.ProteinGraphDataset(
       args.train_path, edge_algorithm=args.edge_algorithm,
       top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm
     )
-    valset = datasets.ProteinGraphDataset(
+    valset = graph_dataset.ProteinGraphDataset(
       args.val_path, edge_algorithm=args.edge_algorithm,
       top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm
     )
-    testset = datasets.ProteinGraphDataset(
+    testset = graph_dataset.ProteinGraphDataset(
       args.test_path, edge_algorithm=args.edge_algorithm,
       top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm
     )
@@ -287,7 +287,7 @@ def main():
         You need to provide a `--checkpoint` folder that points to a pretrained\
         model checkpoint. See the evaluation notebook for instructions.\
       ")
-    testset = datasets.ProteinGraphDataset(args.test_path, edge_algorithm=args.edge_algorithm,
+    testset = graph_dataset.ProteinGraphDataset(args.test_path, edge_algorithm=args.edge_algorithm,
       top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm)
     test(model, testset, weights_path=args.checkpoint)
 

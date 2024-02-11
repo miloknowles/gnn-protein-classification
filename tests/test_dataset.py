@@ -1,7 +1,7 @@
 import numpy as np
 import torch_geometric
 
-from gvpgnn.datasets import ProteinGraphDataset, BatchSampler
+from gvpgnn.graph_dataset import ProteinGraphDataset, BatchSampler
 from gvpgnn.paths import data_folder
 
 

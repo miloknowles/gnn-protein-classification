@@ -2,6 +2,34 @@
 
 import torch
 import torch.nn as nn
+import torch.functional as F
+
+
+
+class DistanceMatrixCNN(nn.Module):
+  """Applies convolutional layers to a pairwise distance matrix."""
+  def __init__(self, output_dim: int = 32):
+    super().__init__()
+    self.conv1 = nn.Conv2d(3, 6, 5)
+    self.pool = nn.MaxPool2d(2, 2)
+    self.conv2 = nn.Conv2d(6, 16, 5)
+    self.conv3 = nn.Conv2d(15, 32, 5)
+    self.conv4 = nn.Conv2d(32, 32, 5)
+    self.fc1 = nn.Linear(32 * 5 * 5, output_dim*4)
+    self.fc2 = nn.Linear(output_dim*4, output_dim*2)
+    self.fc3 = nn.Linear(output_dim*2, output_dim)
+
+  def forward(self, x):
+    x = self.pool(F.relu(self.conv1(x)))
+    x = self.pool(F.relu(self.conv2(x)))
+    x = self.pool(F.relu(self.conv3(x)))
+    x = self.pool(F.relu(self.conv4(x)))
+    x = torch.flatten(x, 1) # flatten all dimensions except batch
+    x = F.relu(self.fc1(x))
+    x = F.relu(self.fc2(x))
+    x = self.fc3(x)
+    return x
+
 
 
 class CNN3D(nn.Module):

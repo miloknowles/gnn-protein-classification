@@ -2,10 +2,7 @@
 
 import numpy as np
 from scipy.special import (factorial, comb as nchoosek)
-import time
 import numba
-import math
-# from math import factorial
 
 import logging
 LOG = logging.getLogger(__name__)

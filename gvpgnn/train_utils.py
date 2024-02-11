@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch_geometric
 
-from .datasets import BatchSampler
+from gvpgnn.graph_dataset import BatchSampler
 
 
 def print_confusion(mat: np.ndarray, lookup: dict, n_categories: int = 10):

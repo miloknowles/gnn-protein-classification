@@ -1,3 +1,7 @@
+"""
+NOTE: This training script and model is still experimental!
+"""
+
 import sys; sys.path.append('..')
 
 from functools import partial
@@ -7,9 +11,9 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import gvpgnn.datasets as datasets
+import gvpgnn.graph_dataset as graph_dataset
 import gvpgnn.cnn as cnn
-import gvpgnn.data_models as dm
+import gvpgnn.models as dm
 import gvpgnn.embeddings as embeddings
 import gvpgnn.train_utils as train_utils
 import numpy as np
@@ -34,12 +38,12 @@ if device == "mps":
 
 
 def make_dataloader(
-  dataset: datasets.ProteinVoxelDataset,
+  dataset: graph_dataset.ProteinVoxelDataset,
   shuffle: bool = False,
 ) -> DataLoader:
   return DataLoader(
     dataset,
-    batch_sampler=datasets.CNNBatchSampler(args.batch_size, dataset.sampler_weights, shuffle=shuffle)
+    batch_sampler=graph_dataset.CNNBatchSampler(args.batch_size, dataset.sampler_weights, shuffle=shuffle)
   )
 
 
@@ -259,15 +263,15 @@ def main():
   ).to(device)
 
   if args.train:
-    trainset = datasets.ProteinVoxelDataset(
+    trainset = graph_dataset.ProteinVoxelDataset(
       args.train_path, plm=args.plm, device=device,
       voxel_grid_dim=args.voxel_grid_dim, apply_random_rotation=args.random_rotation,
     )
-    valset = datasets.ProteinVoxelDataset(
+    valset = graph_dataset.ProteinVoxelDataset(
       args.train_path, plm=args.plm, device=device,
       voxel_grid_dim=args.voxel_grid_dim, apply_random_rotation=False,
     )
-    testset = datasets.ProteinVoxelDataset(
+    testset = graph_dataset.ProteinVoxelDataset(
       args.train_path, plm=args.plm, device=device,
       voxel_grid_dim=args.voxel_grid_dim, apply_random_rotation=False,
     )

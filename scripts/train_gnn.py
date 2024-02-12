@@ -6,10 +6,9 @@ import tqdm, os, json
 import pandas as pd
 import torch
 import torch.nn as nn
-import gvpgnn.datasets as datasets
-import gvpgnn.models as models
-import gvpgnn.paths as paths
-import gvpgnn.data_models as dm
+import gvpgnn.graph_dataset as graph_dataset
+import gvpgnn.gnn as gnn
+import gvpgnn.models as dm
 import gvpgnn.embeddings as embeddings
 import gvpgnn.train_utils as train_utils
 import numpy as np
@@ -17,10 +16,11 @@ import torch_geometric
 from sklearn.metrics import confusion_matrix
 from scripts.parser import parser
 
+#==============================================================================
 print = partial(print, flush=True)
 
 # You can set this to run through all the code quickly and make sure there aren't obvious bugs.
-_FAST_MODE = False
+_FF_DEBUG_MODE = False
 
 args = parser.parse_args()
 
@@ -32,20 +32,29 @@ device = train_utils.get_best_system_device()
 # https://github.com/pytorch/pytorch/issues/77764
 if device == "mps":
   device = "cpu"
+#==============================================================================
 
 
 def train(
-  model: nn.Module,
+  model: gnn.ClassifierGNN,
   params: dict,
-  trainset: torch.utils.data.Dataset,
-  valset: torch.utils.data.Dataset,
-  testset: torch.utils.data.Dataset,
+  trainset: graph_dataset.ProteinGraphDataset,
+  valset: graph_dataset.ProteinGraphDataset,
+  testset: graph_dataset.ProteinGraphDataset,
 ):
-  """Main coordinating function for training the model."""
+  """Main coordinating function for training the model.
+  
+  Notes
+  -----
+  * If the model checkpoint folder for this model already exists, an error will be thrown
+  * A `metrics.csv` file will be continuously updated with metrics from each epoch
+  * A `params.json` file will be saved with the configuration of the model for reproducibility
+  """
   model_id = str(params['model_id'])
-  train_loader = train_utils.dataloader_factory(trainset, args)
-  val_loader = train_utils.dataloader_factory(valset, args)
-  test_loader = train_utils.dataloader_factory(testset, args)
+
+  train_loader = train_utils.graph_dataloader_factory(trainset, args)
+  val_loader = train_utils.graph_dataloader_factory(valset, args)
+  test_loader = train_utils.graph_dataloader_factory(testset, args)
 
   optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -81,8 +90,6 @@ def train(
     print('----------------------------------------------------')
 
     model.eval()
-
-    # VALIDATION SET
     with torch.no_grad():
       loss, acc, confusion = loop(model, val_loader, optimizer=None)
       metrics.append(dict(epoch=epoch, split="val", loss=loss, accuracy=acc))
@@ -90,40 +97,37 @@ def train(
     print('----------------------------------------------------')
     print(f'[EPOCH {epoch}] Validation loss: {loss:.4f} acc: {acc:.4f}')
     train_utils.print_confusion(confusion, lookup=lookup)
-    print('----------------------------------------------------')
     
     # If the latest model checkpoint performs better on the validation set, update.
     if loss < best_val_loss:
       best_path, best_val_loss = path, loss
       print(f'[EPOCH {epoch}] Achieved better validation performance! The best model so far is at: {best_path}.')
-    
-    # TEST SET
     print('----------------------------------------------------')
-    print(f"TESTING: loading from {best_path}")
-    model.load_state_dict(torch.load(best_path))
-
+    
     model.eval()
     with torch.no_grad():
       loss, acc, confusion = loop(model, test_loader, optimizer=None)
       metrics.append(dict(epoch=epoch, split="test", loss=loss, accuracy=acc))
 
     print('----------------------------------------------------')
-    print(f'TEST loss: {loss:.4f} acc: {acc:.4f}')
+    print(f"[EPOCH {epoch}] Loading best model so far from {best_path}")
+    model.load_state_dict(torch.load(best_path))
+    print(f'[EPOCH {epoch}] Test loss: {loss:.4f} acc: {acc:.4f}')
     train_utils.print_confusion(confusion, lookup=lookup)
     print('----------------------------------------------------')
 
-    # Append (by overwriting) the metrics for this epoch.
+    # Append the metrics for this epoch.
     pd.DataFrame(metrics).to_csv(os.path.join(args.models_dir, model_id, "metrics.csv"), index=False)
 
 
 def test(
   model: nn.Module,
-  testset: torch.utils.data.Dataset,
+  testset: graph_dataset.ProteinGraphDataset,
   weights_path: str,
   device: str = "cpu"
 ):
-  """Main coordinating function for training the model."""
-  test_loader = train_utils.dataloader_factory(testset, args)
+  """Main coordinating function for TESTING the model."""
+  test_loader = train_utils.graph_dataloader_factory(testset, args)
 
   lookup = dm.num_to_readable_architecture # label lookup for confusion matrix
 
@@ -137,8 +141,8 @@ def test(
   with torch.no_grad():
     loss, acc, confusion = loop(model, test_loader, optimizer=None)
 
-  print('*** Test set results:')
-  print(f'Loss: {loss:.4f} acc: {acc:.4f}')
+  print('*** MODEL EVALUATION RESULTS ***')
+  print(f'Loss: {loss:.4f}')
   print(f'Accuracy (top1): {100*acc:.4f}%')
 
   print('----------------------------------------------------')
@@ -148,8 +152,8 @@ def test(
 
 def loop(
   model: nn.Module,
-  dataloader: torch_geometric.loader.DataLoader,
-  optimizer=None,
+  dataloader: graph_dataset.GraphBatchSampler,
+  optimizer: torch.optim.Optimizer | None = None,
   n_categories: int = 10,
 ) -> tuple[float, float, float]:
   """Perform one epoch of training or testing.
@@ -177,8 +181,6 @@ def loop(
     h_E = (batch.edge_s, batch.edge_v)
 
     # Generate unnormalized predictions from the network on this batch.
-    # NOTE(milo): Important to pass in the batch indices so that nodes are
-    # associated with the correct graphs in the batch!
     logits = model(h_V, batch.edge_index, h_E, graph_indices=batch.batch)
 
     loss_value = loss_fn(logits, batch.task_label)
@@ -198,12 +200,12 @@ def loop(
   
     confusion += confusion_matrix(actual, pred, labels=range(n_categories))
 
-    # Print out training stats next to progress bar.
+    # Print out some training stats next to progress bar.
     t.set_description("[L=%.3f|A1=%.2f]" % (float(total_loss/total_count), float(100*total_correct/total_count)))
   
     torch.cuda.empty_cache()
 
-    if _FAST_MODE:
+    if _FF_DEBUG_MODE:
       break
       
   return (
@@ -215,15 +217,12 @@ def loop(
 
 def main():
   """Main command line interface for training."""
-  if _FAST_MODE: print("[WARNING] Fast mode is ON! If you're doing a real training run, make sure this is off.")
-
-  if args.plm is None:
-    plm_embedding_dim = 0
-  else:
-    plm_embedding_dim=embeddings.esm2_embedding_dims[args.plm]
+  if _FF_DEBUG_MODE:
+    print("[WARNING] Fast mode is ON! If you're doing a real training run, make sure this is off.")
 
   # If using language model embeddings, these are concatenated with the scalar
   # features for each node.
+  plm_embedding_dim = 0 if args.plm is None else embeddings.esm2_embedding_dims[args.plm]
   node_in_dim = (6 + plm_embedding_dim, 3) # num scalar, num vector
   node_h_dim = (args.node_h_scalar_dim, 16) # num scalar, num vector
   edge_in_dim = (32, 1) # num scalar, num vector
@@ -257,26 +256,26 @@ def main():
     print(f"* {k} = {v}")
 
   # Strip out only the parameters relevant to the model.
-  model_params = models.ClassifierGNNParams.model_validate(train_params).model_dump()
-  model = models.ClassifierGNN(**model_params).to(device)
+  model_params = gnn.ClassifierGNNParams.model_validate(train_params).model_dump()
+  model = gnn.ClassifierGNN(**model_params).to(device)
 
   if args.train:
-    trainset = datasets.ProteinGraphDataset(
+    trainset = graph_dataset.ProteinGraphDataset(
       args.train_path, edge_algorithm=args.edge_algorithm,
       top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm
     )
-    valset = datasets.ProteinGraphDataset(
+    valset = graph_dataset.ProteinGraphDataset(
       args.val_path, edge_algorithm=args.edge_algorithm,
       top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm
     )
-    testset = datasets.ProteinGraphDataset(
+    testset = graph_dataset.ProteinGraphDataset(
       args.test_path, edge_algorithm=args.edge_algorithm,
       top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm
     )
     train(model, train_params, trainset, valset, testset)
 
   elif args.test:
-    print("\n----- TESTING MODE -----\n")
+    print("\nTESTING\n")
     if args.test_path is None:
       raise ValueError("\
         You need to provide a `--test-path` that points to the folder with test\
@@ -287,7 +286,7 @@ def main():
         You need to provide a `--checkpoint` folder that points to a pretrained\
         model checkpoint. See the evaluation notebook for instructions.\
       ")
-    testset = datasets.ProteinGraphDataset(args.test_path, edge_algorithm=args.edge_algorithm,
+    testset = graph_dataset.ProteinGraphDataset(args.test_path, edge_algorithm=args.edge_algorithm,
       top_k=args.top_k, r_ball_radius=args.r_ball_radius, plm=args.plm)
     test(model, testset, weights_path=args.checkpoint)
 

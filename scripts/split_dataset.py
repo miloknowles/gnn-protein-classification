@@ -62,3 +62,23 @@ for split_name in ("train", "val", "test"):
   sf_list = split_superfamilies[split_name]
   df_split = df[df.superfamily.isin(sf_list)]
   df_split.to_csv(paths.data_folder(f"{split_name}_cath_w_seqs_share.csv"), index=False)
+
+
+def check_disjoint_dataset_splits():
+  """Ensure that no examples are shared across splits!"""
+  print("Checking that dataset splits are disjoint...")
+  cath_ids = dict(train=set(), val=set(), test=set())
+
+  for split_name in cath_ids:
+    df_split = pd.read_csv(paths.data_folder(f"{split_name}_cath_w_seqs_share.csv"))
+    cath_ids[split_name] = set(df_split.cath_id.unique())
+
+  # Just to be really sure...
+  assert(cath_ids["train"].isdisjoint(cath_ids["test"]))
+  assert(cath_ids["train"].isdisjoint(cath_ids["val"]))
+  assert(cath_ids["val"].isdisjoint(cath_ids["test"]))
+
+  print("OK")
+
+
+check_disjoint_dataset_splits()

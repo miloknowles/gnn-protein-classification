@@ -1,7 +1,7 @@
 import numpy as np
 import torch_geometric
 
-from gvpgnn.datasets import ProteinGraphDataset, BatchSampler
+from gvpgnn.graph_dataset import ProteinGraphDataset, GraphBatchSampler
 from gvpgnn.paths import data_folder
 
 
@@ -16,6 +16,7 @@ def test_load_with_precomputed_embeddings():
     top_k=1,
     num_rbf=1,
     device="cpu",
+    plm="esm2_t6_8M_UR50D",
     precomputed_embeddings=True
   )
   # Ensure that the embeddings are included in the node scalar features.
@@ -36,7 +37,7 @@ def test_weighted_sampling():
     device="cpu"
   )
 
-  sampler = BatchSampler(
+  sampler = GraphBatchSampler(
     dataset.node_counts,
     max_nodes=3000,
     sampler_weights=dataset.sampler_weights

@@ -25,6 +25,7 @@ parser.add_argument('--epochs', metavar='N', type=int, default=100,
 parser.add_argument('--lr', type=float, default=1e-3, help="The learning rate for Adam optimizer")
 parser.add_argument('--drop-rate', type=float, default=0.1, help="The dropout rate")
 
+# For training the GVP-GNN model:
 parser.add_argument('--plm', choices=[*embeddings.esm2_model_dictionary.keys(), None], 
                     default=None, help="Which pretrained protein language model to use (default None)")
 parser.add_argument('--edge-algorithm', choices=["knn_graph", "radius_graph"], default="knn_graph", help="How to determine graph connectivity")
@@ -35,6 +36,11 @@ parser.add_argument('--node-h-scalar-dim', type=int, default=100, help="The dime
 parser.add_argument('--pooling-op', choices=["naive", "conv", "topk"], default="conv", help="The pooling operation to use")
 parser.add_argument('--n-conv-heads', type=int, default=1, help="The number of heads in Transformer layers")
 parser.add_argument('--n-pool-layers', type=int, default=3, help="The number of pooling layers to apply")
+
+# For training the 3DCNN model:
+parser.add_argument('--batch-size', type=int, default=16, help="The batch size for training")
+parser.add_argument('--voxel-grid-dim', type=int, default=512, help="The size (edge length) of the voxel grid.")
+parser.add_argument('--random-rotation', action="store_true", default=False, help="Apply random rotations to the 3D point clouds")
 
 parser.add_argument('--train', action="store_true", help="Train a model from scratch or from a checkpoint.")
 parser.add_argument('--test', action="store_true", help="Test a trained model")

@@ -24,6 +24,7 @@ def write_pymol_script(input_folder: str, output_folder: str):
       f.write(f"save {output_file}\n")
       f.write("reinitialize\n")
 
+
 if __name__ == "__main__":
   """
   Usage

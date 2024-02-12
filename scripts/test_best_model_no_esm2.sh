@@ -1,5 +1,5 @@
 # All of these configuration options should match those in `train_best_model_no_esm2.sh`!
-python train.py --test \
+python train_gnn.py --test \
   --model-id gvp_l3_k30_s100_no_esm2_topk_pl3_ch3 \
   --test-path ../data/challenge_test_set_with_esm2_t33_650M_UR50D \
   --max-nodes 3000 \

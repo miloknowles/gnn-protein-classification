@@ -1,4 +1,4 @@
-python train.py --train \
+python train_gnn.py --train \
   --model-id gvp_l3_k10_s100_no_esm2 \
   --train-path ../data/cleaned_skip_missing/train \
   --val-path ../data/cleaned_skip_missing/val \

@@ -9,24 +9,7 @@ import Bio.PDB.PDBParser
 from Bio.PDB.Polypeptide import protein_letters_3to1
 
 import gvpgnn.paths as paths
-import gvpgnn.data_models as dm
-
-
-def check_disjoint_dataset_splits():
-  """Ensure that no examples are shared across splits!"""
-  print("Checking that dataset splits are disjoint...")
-  cath_ids = dict(train=set(), val=set(), test=set())
-
-  for split_name in cath_ids:
-    df_split = pd.read_csv(paths.data_folder(f"{split_name}_cath_w_seqs_share.csv"))
-    cath_ids[split_name] = set(df_split.cath_id.unique())
-
-  # Just to be really sure...
-  assert(cath_ids["train"].isdisjoint(cath_ids["test"]))
-  assert(cath_ids["train"].isdisjoint(cath_ids["val"]))
-  assert(cath_ids["val"].isdisjoint(cath_ids["test"]))
-
-  print("OK")
+import gvpgnn.models as dm
 
 
 def preprocess(
@@ -158,7 +141,7 @@ if __name__ == "__main__":
   If you're just trying to evaluate a pre-trained model, you'll want to run a command like:
 
   ```
-  python preprocess.py --csv challenge_test_set.csv \
+  python preprocess_dataset.py --csv challenge_test_set.csv \
     --output-folder ../data/challenge_test_set \
     --pdb-folder ../data/pdb_share
   ```
@@ -186,7 +169,6 @@ if __name__ == "__main__":
 
   # NOTE(milo): This code is for my training process only; you shouldn't need to run it.
   if args.all:
-    # check_disjoint_dataset_splits()
     dataset_version = "cleaned_skip_missing"
 
     for split_name in ("train", "test", "val"):

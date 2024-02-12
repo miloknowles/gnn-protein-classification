@@ -1,4 +1,4 @@
-python train.py --train \
+python train_gnn.py --train \
   --model-id gvp_l3_k30_s100_8M_topk_pl3_ch3 \
   --train-path ../data/cleaned_with_esm2_t6_8M_UR50D/train \
   --val-path ../data/cleaned_with_esm2_t6_8M_UR50D/val \

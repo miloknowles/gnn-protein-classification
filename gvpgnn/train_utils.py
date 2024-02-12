@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch_geometric
 
-from .datasets import BatchSampler
+from gvpgnn.graph_dataset import GraphBatchSampler
 
 
 def print_confusion(mat: np.ndarray, lookup: dict, n_categories: int = 10):
@@ -32,12 +32,12 @@ def get_best_system_device() -> str:
   return device
 
 
-def dataloader_factory(dataset: torch.utils.data.Dataset, args: any) -> torch_geometric.loader.DataLoader:
+def graph_dataloader_factory(dataset: torch.utils.data.Dataset, args: any) -> torch_geometric.loader.DataLoader:
   """Convenience function for intializing a DataLoader using a dataset and some arguments."""
   return torch_geometric.loader.DataLoader(
     dataset,
     num_workers=args.num_workers,
-    batch_sampler=BatchSampler(
+    batch_sampler=GraphBatchSampler(
       dataset.node_counts,
       max_nodes=args.max_nodes,
       shuffle=True,

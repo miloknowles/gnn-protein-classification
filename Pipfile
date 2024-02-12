@@ -21,11 +21,12 @@ torch-scatter = "==2.1.2"
 pydantic = "==2.6.1"
 pytest = "*"
 pyarrow = "*"
-meshlib = "*"
 
 [dev-packages]
 pywavefront = "*"
 numba = "*"
+meshlib = "*"
+open3d = "*"
 
 [requires]
 python_version = "3.11"

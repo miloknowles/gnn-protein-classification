@@ -32,7 +32,7 @@ def get_best_system_device() -> str:
   return device
 
 
-def dataloader_factory(dataset: torch.utils.data.Dataset, args: any) -> torch_geometric.loader.DataLoader:
+def graph_dataloader_factory(dataset: torch.utils.data.Dataset, args: any) -> torch_geometric.loader.DataLoader:
   """Convenience function for intializing a DataLoader using a dataset and some arguments."""
   return torch_geometric.loader.DataLoader(
     dataset,

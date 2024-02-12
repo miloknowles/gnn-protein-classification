@@ -43,7 +43,7 @@ def make_dataloader(
 ) -> DataLoader:
   return DataLoader(
     dataset,
-    batch_sampler=graph_dataset.CNNGraphBatchSampler(args.batch_size, dataset.sampler_weights, shuffle=shuffle)
+    batch_sampler=graph_dataset.VoxelBatchSampler(args.batch_size, dataset.sampler_weights, shuffle=shuffle)
   )
 
 
@@ -136,7 +136,7 @@ def test(
   device: str = "cpu"
 ):
   """Main coordinating function for training the model."""
-  test_loader = train_utils.dataloader_factory(testset, args)
+  test_loader = train_utils.graph_dataloader_factory(testset, args)
 
   lookup = dm.num_to_readable_architecture # label lookup for confusion matrix
 

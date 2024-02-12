@@ -12,9 +12,9 @@ import gvpgnn.embeddings as embeddings
 
 
 def _normalize(tensor, dim=-1):
-  '''
+  """
   Normalizes a `torch.Tensor` along dimension `dim` without `nan`s.
-  '''
+  """
   return torch.nan_to_num(
     torch.div(tensor, torch.norm(tensor, dim=dim, keepdim=True)))
 
@@ -262,7 +262,7 @@ class ProteinGraphDataset(data.Dataset):
   
 
 class GraphBatchSampler(data.Sampler):
-  '''A `torch.utils.data.Sampler` which samples batches according to a
+  """A `torch.utils.data.Sampler` which samples batches according to a
   maximum number of graph nodes.
   
   Note that Any graphs with more than the maximum will not be sampled.
@@ -275,7 +275,7 @@ class GraphBatchSampler(data.Sampler):
   * `node_counts` : A list of node counts in each graph of the dataset.
   * `max_nodes` : The maximum number of nodes in any batch, including batches of a single element
   * `shuffle`: Whether to shuffle indices before choosing batches
-  '''
+  """
   def __init__(
     self,
     node_counts: list[int],

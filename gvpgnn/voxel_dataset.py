@@ -105,15 +105,15 @@ class ProteinVoxelDataset(data.Dataset):
     )
 
 
-class CNNGraphBatchSampler(data.Sampler):
-  '''A `torch.utils.data.Sampler` for sampling minibatches of 3D voxel grids.
+class VoxelBatchSampler(data.Sampler):
+  """A `torch.utils.data.Sampler` for sampling minibatches of 3D voxel grids.
   
   Parameters
   ----------
   * `batch_size` : The number of examples to include in the batch
   * `sampler_weights` : How much to weight each example in the dataset (does not have to sum to one)
   * `shuffle`: Whether to randomly shuffle the dataset before sampling batches
-  '''
+  """
   def __init__(
     self,
     batch_size: int,

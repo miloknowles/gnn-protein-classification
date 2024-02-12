@@ -16,6 +16,7 @@ def test_load_with_precomputed_embeddings():
     top_k=1,
     num_rbf=1,
     device="cpu",
+    plm="esm2_t6_8M_UR50D",
     precomputed_embeddings=True
   )
   # Ensure that the embeddings are included in the node scalar features.

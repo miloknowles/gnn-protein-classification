@@ -12,23 +12,6 @@ import gvpgnn.paths as paths
 import gvpgnn.models as dm
 
 
-def check_disjoint_dataset_splits():
-  """Ensure that no examples are shared across splits!"""
-  print("Checking that dataset splits are disjoint...")
-  cath_ids = dict(train=set(), val=set(), test=set())
-
-  for split_name in cath_ids:
-    df_split = pd.read_csv(paths.data_folder(f"{split_name}_cath_w_seqs_share.csv"))
-    cath_ids[split_name] = set(df_split.cath_id.unique())
-
-  # Just to be really sure...
-  assert(cath_ids["train"].isdisjoint(cath_ids["test"]))
-  assert(cath_ids["train"].isdisjoint(cath_ids["val"]))
-  assert(cath_ids["val"].isdisjoint(cath_ids["test"]))
-
-  print("OK")
-
-
 def preprocess(
   split_path: str,
   output_folder: str,
@@ -186,7 +169,6 @@ if __name__ == "__main__":
 
   # NOTE(milo): This code is for my training process only; you shouldn't need to run it.
   if args.all:
-    # check_disjoint_dataset_splits()
     dataset_version = "cleaned_skip_missing"
 
     for split_name in ("train", "test", "val"):

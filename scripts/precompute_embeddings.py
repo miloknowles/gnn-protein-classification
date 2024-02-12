@@ -93,10 +93,12 @@ if __name__ == "__main__":
 
   Usage
   -----
+  ```
   python precompute_embeddings.py --in-dataset ../data/challenge_test_set
+  ```
 
   You should see output like:
-
+  ```
   Using device 'cpu'
   Loading model 'esm2_t33_650M_UR50D'
   Found 1261 examples, breaking into batches of size 16
@@ -106,6 +108,7 @@ if __name__ == "__main__":
   Finished batch 4/79 in 5.69 sec
   Finished batch 5/79 in 14.67 sec
   Finished batch 6/79 in 5.91 sec
+  ```
   """
   import argparse
   parser = argparse.ArgumentParser()

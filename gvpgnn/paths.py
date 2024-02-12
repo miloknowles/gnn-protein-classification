@@ -2,7 +2,7 @@ import os
 
 
 def top_folder(rel='') -> str:
-  """Returns the path to the top of `backend`."""
+  """Returns the path to the top of the repository."""
   return os.path.join(os.path.abspath(os.path.join(os.path.realpath(__file__), "../../")), rel)
 
 

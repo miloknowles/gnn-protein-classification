@@ -43,7 +43,7 @@ def make_dataloader(
 ) -> DataLoader:
   return DataLoader(
     dataset,
-    batch_sampler=graph_dataset.CNNBatchSampler(args.batch_size, dataset.sampler_weights, shuffle=shuffle)
+    batch_sampler=graph_dataset.CNNGraphBatchSampler(args.batch_size, dataset.sampler_weights, shuffle=shuffle)
   )
 
 

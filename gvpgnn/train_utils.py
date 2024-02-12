@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch_geometric
 
-from gvpgnn.graph_dataset import BatchSampler
+from gvpgnn.graph_dataset import GraphBatchSampler
 
 
 def print_confusion(mat: np.ndarray, lookup: dict, n_categories: int = 10):
@@ -37,7 +37,7 @@ def dataloader_factory(dataset: torch.utils.data.Dataset, args: any) -> torch_ge
   return torch_geometric.loader.DataLoader(
     dataset,
     num_workers=args.num_workers,
-    batch_sampler=BatchSampler(
+    batch_sampler=GraphBatchSampler(
       dataset.node_counts,
       max_nodes=args.max_nodes,
       shuffle=True,

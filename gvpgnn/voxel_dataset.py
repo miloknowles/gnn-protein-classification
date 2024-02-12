@@ -1,5 +1,6 @@
 import glob
 import json
+import random
 import numpy as np
 import torch
 import torch.utils.data as data
@@ -47,8 +48,8 @@ class ProteinVoxelDataset(data.Dataset):
 
     # Determine the frequence of labels in the dataset (used by the sampler).
     num_categories = 10
-    self.label_counts = torch.zeros(len(num_categories))
-    self.node_labels = torch.zeros(len(self.filenames))
+    self.label_counts = torch.zeros(num_categories, dtype=torch.int)
+    self.node_labels = torch.zeros(len(self.filenames), dtype=torch.int)
 
     # Open up each file to see how many nodes it contains:
     for i, filename in enumerate(self.filenames):
@@ -102,3 +103,51 @@ class ProteinVoxelDataset(data.Dataset):
       task_label=data['task_label'],
       occupancy_grid=O,
     )
+
+
+class CNNGraphBatchSampler(data.Sampler):
+  '''A `torch.utils.data.Sampler` for sampling minibatches of 3D voxel grids.
+  
+  Parameters
+  ----------
+  * `batch_size` : The number of examples to include in the batch
+  * `sampler_weights` : How much to weight each example in the dataset (does not have to sum to one)
+  * `shuffle`: Whether to randomly shuffle the dataset before sampling batches
+  '''
+  def __init__(
+    self,
+    batch_size: int,
+    sampler_weights: np.ndarray,
+    shuffle: bool = True,
+  ):
+    self.batch_size = batch_size
+    self.shuffle = shuffle
+    self.sampler_weights = sampler_weights
+    self._form_batches()
+  
+  def _form_batches(self):
+    """Form batches with random sampling.
+    """
+    self.batches = []
+    idx = list(data.WeightedRandomSampler(self.sampler_weights, len(self.sampler_weights), replacement=True))
+
+    if self.shuffle:
+      random.shuffle(idx)
+
+    N = len(idx)
+    B = self.batch_size
+
+    for b in range(N // B - 1):
+      self.batches.append(idx[b*B : b*B + B])
+
+  def __len__(self) -> int:
+    """Returns the number of batches.""" 
+    return len(self.batches)
+  
+  def __iter__(self):
+    """Generator function for batches.
+    
+    Each batch is a list of indices in the dataset to sample.
+    """
+    for batch in self.batches:
+      yield batch

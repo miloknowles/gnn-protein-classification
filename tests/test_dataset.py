@@ -1,7 +1,7 @@
 import numpy as np
 import torch_geometric
 
-from gvpgnn.graph_dataset import ProteinGraphDataset, BatchSampler
+from gvpgnn.graph_dataset import ProteinGraphDataset, GraphBatchSampler
 from gvpgnn.paths import data_folder
 
 
@@ -36,7 +36,7 @@ def test_weighted_sampling():
     device="cpu"
   )
 
-  sampler = BatchSampler(
+  sampler = GraphBatchSampler(
     dataset.node_counts,
     max_nodes=3000,
     sampler_weights=dataset.sampler_weights

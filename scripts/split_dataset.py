@@ -1,4 +1,4 @@
-import sys; sys.path.append("..")
+import sys; sys.path.append(".."); sys.path.append("../../");
 import pandas as pd
 import gvpgnn.paths as paths
 
